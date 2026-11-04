@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberMitra</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1b1b1b; --muted:#666; --card:#fff; --line:#ddd; --red:#c62828; --ok:#2e7d32; --warn:#b26a00; --accent:#1f4fa3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --fg:#eee; --muted:#aaa; --card:#1e1e1e; --line:#333; --accent:#7aa7ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui, "Noto Sans Tamil", sans-serif; }
+  header { position:sticky; top:0; background:var(--bg); padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:center; z-index:5; }
+  header h1 { font-size:18px; margin:0; flex:1; }
+  .call { background:var(--red); color:#fff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:8px; font-size:18px; }
+  .banner { background:#fff3cd; color:#5c4400; padding:8px 16px; font-size:14px; }
+  main { max-width:680px; margin:0 auto; padding:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
+  h2 { font-size:15px; margin:0 0 8px; color:var(--muted); font-weight:600; }
+  button { font:inherit; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); padding:10px 14px; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  #ptt { width:100%; padding:22px; font-size:20px; font-weight:700; touch-action:none; user-select:none; }
+  #ptt.rec { background:var(--red); color:#fff; border-color:var(--red); }
+  #prompt { font-size:18px; }
+  #transcript { color:var(--muted); font-size:14px; margin-top:6px; min-height:1em; }
+  textarea { width:100%; min-height:80px; font:inherit; padding:8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  td { padding:5px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.k { color:var(--muted); width:36%; }
+  .chip { font-size:12px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); margin-left:6px; white-space:nowrap; }
+  .chip.confirmed { color:var(--ok); border-color:var(--ok); }
+  .chip.unconfirmed { color:var(--warn); border-color:var(--warn); }
+  .chip.pending { color:var(--accent); border-color:var(--accent); }
+  #rbDigits { font-size:44px; font-weight:700; letter-spacing:6px; text-align:center; font-variant-numeric:tabular-nums; margin:8px 0; word-break:break-all; }
+  .row { display:flex; gap:10px; }
+  .row > button { flex:1; font-size:22px; padding:16px; }
+  .yes { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .no { background:var(--red); color:#fff; border-color:var(--red); }
+  #numpad { display:none; }
+  #numDisplay { font-size:28px; text-align:center; letter-spacing:4px; min-height:40px; padding:6px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; font-variant-numeric:tabular-nums; }
+  .pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .pad button { font-size:22px; padding:14px; }
+  pre { white-space:pre-wrap; font:14px/1.5 ui-monospace, Consolas, monospace; background:var(--bg); padding:10px; border-radius:8px; border:1px solid var(--line); }
+  .hidden { display:none !important; }
+  footer { color:var(--muted); font-size:13px; text-align:center; padding:20px 16px 40px; }
+  .handoff { border-color:var(--red); }
+  label { display:flex; gap:8px; align-items:flex-start; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="appName">CyberMitra</h1>
+  <a class="call" href="tel:1930">📞 Call 1930</a>
+</header>
+<div id="banner" class="banner hidden"></div>
+<main>
+  <section id="start">
+    <h2>Before we start / தொடங்கும் முன்</h2>
+    <p>This tool only helps you <b>prepare</b> what to tell the 1930 helpline. It does not file a complaint or contact police or banks. Audio is not stored.</p>
+    <p>இது 1930-க்கு சொல்ல வேண்டிய விவரங்களை <b>தயார் செய்ய</b> மட்டும் உதவும். புகார் பதிவு செய்யாது.</p>
+    <label><input type="checkbox" id="consent"> I understand and agree / புரிந்துகொண்டேன்</label>
+    <p class="row" style="margin-top:12px">
+      <button class="primary" data-lang="ta" disabled>தமிழில் தொடங்கு</button>
+      <button class="primary" data-lang="en" disabled>Start in English</button>
+    </p>
+  </section>
+
+  <div id="app" class="hidden">
+    <section>
+      <div id="prompt"></div>
+      <div id="transcript"></div>
+    </section>
+
+    <section id="handoff" class="handoff hidden">
+      <h2>Please get help now</h2>
+      <p id="handoffText"></p>
+      <p><a class="call" href="tel:1930">Call 1930</a> &nbsp; <a id="manas" class="call hidden" href="tel:14416">Tele-MANAS 14416</a></p>
+      <p><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">cybercrime.gov.in</a></p>
+    </section>
+
+    <section id="readback" class="hidden">
+      <h2 id="rbLabel"></h2>
+      <div id="rbDigits"></div>
+      <div class="row">
+        <button class="yes" id="rbYes">✓ சரி</button>
+        <button class="no" id="rbNo">✗ தப்பு</button>
+      </div>
+    </section>
+
+    <section id="numpad">
+      <h2 id="npLabel">Type it / டைப் செய்யுங்கள்</h2>
+      <div id="numDisplay"></div>
+      <div class="pad" id="pad"></div>
+      <p class="row" style="margin-top:8px"><button id="npSend" class="primary">Done ✓</button></p>
+    </section>
+
+    <section id="typeBox" class="hidden">
+      <h2 id="typeLabel">Or type it / டைப் செய்யுங்கள்</h2>
+      <p class="row"><input id="typeInput" type="text" maxlength="80" autocomplete="off" style="flex:3;font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)">
+      <button id="typeSend" class="primary" style="flex:1">OK</button></p>
+      <p id="typeHint" style="color:var(--muted);font-size:13px;margin:0"></p>
+    </section>
+
+    <section id="talk">
+      <button id="ptt">🎤 Hold to talk / அழுத்திப் பேசுங்கள்</button>
+      <p class="row" style="margin-top:8px">
+        <button id="skipBtn">Skip / தவிர்</button>
+        <button id="finishBtn">Make card now</button>
+      </p>
+    </section>
+
+    <section id="smsBox">
+      <h2>Paste bank SMS (optional) / பேங்க் SMS பேஸ்ட் செய்யுங்கள்</h2>
+      <textarea id="sms" placeholder="Rs.50,000 debited ... UPI Ref No 4306XXXXXXXX"></textarea>
+      <p><button id="smsSend">Use SMS</button></p>
+    </section>
+
+    <section>
+      <h2>Details so far / விவரங்கள்</h2>
+      <table id="fields"></table>
+    </section>
+
+    <section id="cardBox" class="hidden">
+      <h2>Your 1930 Call Card</h2>
+      <pre id="card"></pre>
+      <p class="row"><button id="copyBtn" class="primary">Copy</button><button id="shareBtn">Share</button></p>
+    </section>
+  </div>
+</main>
+<footer>Not affiliated with MHA, I4C, NCRP or Tamil Nadu Police. Draft only — always call 1930 and file at cybercrime.gov.in.</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const LABELS = { amount:"Amount / தொகை", bank:"Bank / பேங்க்", datetime:"Date & time / நேரம்", utr:"UTR / Ref",
+    suspect_phone:"Caller's number / கால் வந்த நம்பர்", suspect_upi:"UPI ID", victim_name:"Your name / பெயர்",
+    victim_mobile:"Your mobile / மொபைல்", district:"District / மாவட்டம்", fraud_type:"Fraud type" };
+  let sid = null, last = null, numpadField = null, numBuf = "", audioQueue = [], player = new Audio();
+  const TEXT_FIELDS = { bank: "e.g. SBI", datetime: "e.g. yesterday 3 pm / 2 Nov 15:30", suspect_upi: "e.g. name@ybl",
+    victim_name: "", district: "e.g. Madurai" };
+  let typeField = null;
+
+  // --- consent + start
+  $("consent").addEventListener("change", e => document.querySelectorAll("[data-lang]").forEach(b => b.disabled = !e.target.checked));
+  document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", async () => {
+    const r = await api("/api/session", { lang: b.dataset.lang, consent: true });
+    if (!r) return;
+    sid = r.session_id;
+    $("start").classList.add("hidden"); $("app").classList.remove("hidden");
+    render(r);
+  }));
+
+  async function api(path, body, isForm) {
+    try {
+      const opts = { method: "POST" };
+      if (isForm) opts.body = body; else { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body || {}); }
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { $("prompt").textContent = (data.prompt && data.prompt.text) || ("Error " + res.status + ". Please call 1930."); return null; }
+      return data;
+    } catch (e) { $("prompt").textContent = "Network error. Please call 1930."; return null; }
+  }
+
+  // --- audio playback (sequential)
+  function play(urls) {
+    audioQueue = (urls || []).slice();
+    player.pause();
+    next();
+  }
+  function next() {
+    const u = audioQueue.shift();
+    if (!u) return;
+    player.src = u; player.onended = next; player.play().catch(() => {});
+  }
+
+  // --- render
+  function render(r) {
+    last = r;
+    if (r.demo_banner) { $("banner").textContent = r.demo_banner; $("banner").classList.remove("hidden"); }
+    $("prompt").textContent = r.prompt.text || "";
+    $("transcript").textContent = r.transcript ? "🗣 " + r.transcript : "";
+    play(r.prompt.audio_urls);
+    // fields
+    const rows = [];
+    for (const k of Object.keys(LABELS)) {
+      const f = r.fields[k]; if (!f) continue;
+      const chip = f.status === "empty" ? "" : `<span class="chip ${esc(f.status)}">${esc(f.status)}${f.source ? " · " + esc(f.source) : ""}</span>`;
+      rows.push(`<tr><td class="k">${LABELS[k]}</td><td>${esc(f.display)}${chip}</td></tr>`);
+    }
+    $("fields").innerHTML = rows.join("");
+    // readback
+    if (r.readback) {
+      $("readback").classList.remove("hidden");
+      $("rbLabel").textContent = (LABELS[r.readback.field] || r.readback.field) + (r.readback.total_chunks > 1 ? ` (${r.readback.chunk_index + 1}/${r.readback.total_chunks})` : "");
+      const f = r.fields[r.readback.field];
+      $("rbDigits").textContent = r.readback.field === "amount" && f ? f.display : r.readback.chunk_display;
+    } else $("readback").classList.add("hidden");
+    // numpad
+    // number questions always offer the keypad (the UTR prompt says "type it"); read-back offers it when needed
+    const DIGIT_FIELDS = ["amount", "utr", "suspect_phone", "victim_mobile"];
+    const np = r.numpad || (r.readback && r.readback.numpad ? { field: r.readback.field } : null)
+      || (r.state === "GAP_FILL" && DIGIT_FIELDS.includes(r.current_field) ? { field: r.current_field } : null);
+    if (np && np.field) openNumpad(np.field); else closeNumpad();
+    // typed entry for text fields (voice is not the only way in)
+    const cur = r.current_field;
+    const active = ["GAP_FILL", "READBACK"].includes(r.state) && cur && cur in TEXT_FIELDS;
+    if (active) {
+      if (typeField !== cur) $("typeInput").value = "";
+      typeField = cur;
+      $("typeLabel").textContent = "Or type " + (LABELS[cur] || cur);
+      $("typeInput").placeholder = TEXT_FIELDS[cur];
+      $("typeHint").textContent = "";
+      $("typeBox").classList.remove("hidden");
+    } else { typeField = null; $("typeBox").classList.add("hidden"); }
+    // handoff
+    if (r.handoff) {
+      $("handoff").classList.remove("hidden");
+      $("handoffText").textContent = r.prompt.text;
+      $("manas").classList.toggle("hidden", r.handoff !== "HANDOFF_WELLBEING");
+      ["talk", "smsBox", "readback", "numpad", "typeBox"].forEach(id => $(id).classList.add("hidden"));
+    }
+    if (r.card) {
+      $("cardBox").classList.remove("hidden"); $("card").textContent = r.card;
+      ["talk", "readback", "numpad", "typeBox"].forEach(id => $(id).classList.add("hidden"));
+      $("cardBox").scrollIntoView({ behavior: "smooth" });
+    }
+  }
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+  // --- read-back buttons (authoritative)
+  $("rbYes").onclick = () => confirmChunk("yes");
+  $("rbNo").onclick = () => confirmChunk("no");
+  async function confirmChunk(answer) {
+    if (!last || !last.readback) return;
+    const r = await api(`/api/session/${sid}/confirm`, { field: last.readback.field, chunk_index: last.readback.chunk_index, answer });
+    if (r) render(r);
+  }
+
+  // --- numpad
+  const keys = ["1","2","3","4","5","6","7","8","9","⌫","0","C"];
+  $("pad").innerHTML = keys.map(k => `<button data-k="${k}">${k}</button>`).join("");
+  $("pad").addEventListener("click", e => {
+    const k = e.target.dataset.k; if (!k) return;
+    if (k === "⌫") numBuf = numBuf.slice(0, -1); else if (k === "C") numBuf = ""; else if (numBuf.length < 14) numBuf += k;
+    $("numDisplay").textContent = numBuf;
+  });
+  function openNumpad(field) {
+    if (numpadField !== field) { numBuf = ""; $("numDisplay").textContent = ""; }
+    numpadField = field; $("npLabel").textContent = "Type " + (LABELS[field] || field);
+    $("numpad").style.display = "block";
+  }
+  function closeNumpad() { numpadField = null; $("numpad").style.display = "none"; }
+  $("npSend").onclick = async () => {
+    if (!numpadField || !numBuf) return;
+    const r = await api(`/api/session/${sid}/numpad`, { field: numpadField, digits: numBuf });
+    numBuf = ""; $("numDisplay").textContent = "";
+    if (r) render(r);
+  };
+
+  // --- typed text
+  async function sendTyped() {
+    const v = $("typeInput").value.trim();
+    if (!typeField || !v) return;
+    const r = await api(`/api/session/${sid}/numpad`, { field: typeField, digits: v });
+    if (!r) return;
+    if (r.numpad && r.numpad.error) { $("typeHint").textContent = "That doesn't look right — please check and try again."; return; }
+    $("typeInput").value = "";
+    render(r);
+  }
+  $("typeSend").onclick = sendTyped;
+  $("typeInput").addEventListener("keydown", e => { if (e.key === "Enter") sendTyped(); });
+
+  // --- SMS / skip / finish
+  $("smsSend").onclick = async () => {
+    const t = $("sms").value.trim(); if (!t) return;
+    const r = await api(`/api/session/${sid}/sms`, { text: t });
+    if (r) { $("sms").value = ""; render(r); }
+  };
+  $("skipBtn").onclick = async () => {
+    const f = (last && last.current_field) || currentField();
+    if (!f) return;
+    const r = await api(`/api/session/${sid}/skip`, { field: f });
+    if (r) render(r);
+  };
+  function currentField() {
+    if (!last) return null;
+    for (const k of ["amount","bank","datetime","utr","suspect_phone","suspect_upi","victim_name","victim_mobile","district"])
+      if (last.fields[k] && last.fields[k].status === "empty") return k;
+    return null;
+  }
+  $("finishBtn").onclick = async () => { const r = await api(`/api/session/${sid}/finish`, {}); if (r) render(r); };
+
+  // --- card copy / share
+  $("copyBtn").onclick = () => navigator.clipboard.writeText($("card").textContent).then(() => $("copyBtn").textContent = "Copied ✓");
+  $("shareBtn").onclick = () => {
+    const text = $("card").textContent;
+    if (navigator.share) navigator.share({ title: "1930 Call Card", text }).catch(() => {});
+    else navigator.clipboard.writeText(text).then(() => $("shareBtn").textContent = "Copied ✓");
+  };
+
+  // --- push to talk
+  let rec = null, chunks = [], stopTimer = null, stream = null;
+  const ptt = $("ptt");
+  async function startRec(e) {
+    e.preventDefault();
+    if (rec || !sid) return;
+    try { stream = stream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (err) { $("prompt").textContent = "Microphone blocked. You can still paste the SMS or use the keypad."; return; }
+    player.pause();
+    chunks = [];
+    const mime = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+    rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
+    rec.onstop = upload;
+    rec.start();
+    ptt.classList.add("rec"); ptt.textContent = "● Recording… release to send";
+    stopTimer = setTimeout(stopRec, 25000);  // hard stop at 25 s
+  }
+  function stopRec() {
+    clearTimeout(stopTimer);
+    if (rec && rec.state !== "inactive") rec.stop();
+    ptt.classList.remove("rec"); ptt.textContent = "🎤 Hold to talk / அழுத்திப் பேசுங்கள்";
+  }
+  async function upload() {
+    const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+    rec = null;
+    if (blob.size < 1000) return;
+    const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
+    const fd = new FormData(); fd.append("audio", blob, "clip." + ext);
+    ptt.disabled = true; $("transcript").textContent = "…";
+    const r = await api(`/api/session/${sid}/turn`, fd, true);
+    ptt.disabled = false;
+    if (r) render(r);
+  }
+  ptt.addEventListener("pointerdown", startRec);
+  ptt.addEventListener("pointerup", stopRec);
+  ptt.addEventListener("pointerleave", () => rec && stopRec());
+  ptt.addEventListener("keydown", e => { if (e.code === "Space" && !e.repeat) startRec(e); });
+  ptt.addEventListener("keyup", e => { if (e.code === "Space") stopRec(); });
+
+  window.addEventListener("pagehide", () => { if (sid) navigator.sendBeacon && fetch(`/api/session/${sid}`, { method: "DELETE", keepalive: true }); });
+})();
+</script>
+</body>
+</html>

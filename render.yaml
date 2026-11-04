@@ -1,0 +1,22 @@
+# Render blueprint (https://render.com/docs/blueprint-spec). Set GNANI_API_KEY in the dashboard, never here.
+services:
+  - type: web
+    name: cybermitra
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: GNANI_API_KEY
+        sync: false
+      - key: OPERATOR_TOKEN        # shared secret for /operator; set in the dashboard
+        sync: false
+      - key: TRUST_PROXY_HEADERS   # Render terminates TLS and sets X-Forwarded-For
+        value: "true"
+      - key: HSTS
+        value: "true"
+      - key: DEMO_MODE
+        value: "true"
+      - key: TTS_VOICE_TA
+        value: Asmita
+      - key: TTS_VOICE_EN
+        value: Kaveri

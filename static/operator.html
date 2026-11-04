@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operator Review Queue</title>
+<style>
+  :root { --bg:#f6f6f3; --fg:#1b1b1b; --muted:#666; --card:#fff; --line:#ddd; --red:#c62828; --ok:#2e7d32; --warn:#b26a00; --accent:#1f4fa3; --hl:#fff4d6; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#121212; --fg:#eee; --muted:#aaa; --card:#1d1d1d; --line:#333; --accent:#7aa7ff; --hl:#3a3017; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, "Noto Sans Tamil", sans-serif; }
+  header { display:flex; align-items:center; gap:16px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:17px; margin:0; }
+  .banner { background:#fff3cd; color:#5c4400; padding:6px 18px; font-size:13px; }
+  .metrics { display:flex; gap:18px; flex-wrap:wrap; margin-left:auto; font-size:13px; color:var(--muted); }
+  .metrics b { color:var(--fg); font-size:15px; font-variant-numeric:tabular-nums; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--line); display:inline-block; }
+  .dot.on { background:var(--ok); }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:14px; padding:14px 18px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:14px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 8px; display:flex; justify-content:space-between; }
+  .item { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; cursor:pointer; }
+  .item:hover, .item.sel { border-color:var(--accent); }
+  .item .top { display:flex; justify-content:space-between; gap:8px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .item .why { color:var(--muted); font-size:12px; }
+  .handoffs .item { border-left:4px solid var(--red); }
+  .chip { font-size:11px; padding:1px 7px; border-radius:10px; border:1px solid var(--line); white-space:nowrap; }
+  .chip.red { color:#fff; background:var(--red); border-color:var(--red); }
+  .chip.warn { color:var(--warn); border-color:var(--warn); }
+  .chip.ok { color:var(--ok); border-color:var(--ok); }
+  .chip.src { color:var(--muted); }
+  button { font:inherit; border-radius:7px; border:1px solid var(--line); background:var(--card); color:var(--fg); padding:7px 12px; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.approve { background:var(--ok); color:#fff; border-color:var(--ok); font-weight:700; padding:9px 18px; }
+  button.danger { color:var(--red); border-color:var(--red); }
+  button:disabled { opacity:.45; cursor:default; }
+  table { width:100%; border-collapse:collapse; }
+  td, th { text-align:left; padding:6px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; width:150px; }
+  tr.verify td, tr.verify th { background:var(--hl); }
+  td.v { font-variant-numeric:tabular-nums; font-size:15px; }
+  .edit { font-size:12px; padding:2px 8px; float:right; }
+  pre { white-space:pre-wrap; font:12.5px/1.5 ui-monospace, Consolas, monospace; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+  .muted { color:var(--muted); }
+  .empty { color:var(--muted); font-style:italic; padding:6px 0; }
+  .audit { max-height:220px; overflow:auto; font-size:12px; }
+  .audit div { padding:3px 0; border-bottom:1px dashed var(--line); }
+  .live .item { cursor:default; border-style:dashed; }
+  #login { max-width:420px; margin:80px auto; }
+  input[type=password], input[type=text] { font:inherit; padding:8px; border-radius:7px; border:1px solid var(--line); background:var(--bg); color:var(--fg); width:100%; }
+  .hidden { display:none !important; }
+  .transcript div { padding:3px 0; border-bottom:1px dashed var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Operator Review Queue</h1>
+  <span title="live updates"><span id="dot" class="dot"></span></span>
+  <div class="metrics" id="metrics"></div>
+</header>
+<div class="banner">Demo — synthetic data only. Packets are DRAFTS: approving changes their status here and submits nothing anywhere. Transfers are simulated.</div>
+
+<section id="login">
+  <h2>Operator sign-in</h2>
+  <p class="muted">Enter the operator token (OPERATOR_TOKEN). It is kept in this tab's memory only.</p>
+  <p><input id="token" type="password" autocomplete="off"></p>
+  <p><button id="go" class="primary">Open queue</button> <span id="loginErr" class="muted"></span></p>
+</section>
+
+<main id="app" class="hidden">
+  <div>
+    <section class="handoffs">
+      <h2>Handoffs <span id="nHand"></span></h2>
+      <div id="handoffs"></div>
+    </section>
+    <section>
+      <h2>Review queue <span id="nRev"></span></h2>
+      <div id="review"></div>
+    </section>
+    <section class="live">
+      <h2>Calls in progress (AI) <span id="nLive"></span></h2>
+      <div id="live"></div>
+    </section>
+    <section>
+      <h2>Recently decided</h2>
+      <div id="done"></div>
+    </section>
+    <section>
+      <h2>Queue audit log</h2>
+      <div id="audit" class="audit"></div>
+    </section>
+  </div>
+  <div>
+    <section id="packetBox">
+      <div id="packetEmpty" class="empty">Select a packet from the queue.</div>
+      <div id="packet" class="hidden">
+        <h2><span id="pTitle"></span> <span id="pStatus"></span></h2>
+        <div id="pReason"></div>
+        <div class="actions">
+          <button id="claimBtn" class="primary">Take call</button>
+          <button id="approveBtn" class="approve">Approve</button>
+          <button id="rejectBtn" class="danger">Reject</button>
+          <button id="addTxnBtn">+ Transaction</button>
+          <span style="flex:1"></span>
+          <button id="copyBtn">Copy text</button>
+          <button id="jsonBtn">Download JSON</button>
+        </div>
+        <table id="pFields"></table>
+        <div id="transcriptBox" class="hidden">
+          <h2 style="margin-top:14px">Call transcript (masked)</h2>
+          <div id="transcript" class="transcript"></div>
+        </div>
+        <h2 style="margin-top:14px">Complaint packet (text)</h2>
+        <pre id="pText"></pre>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+  const TXN = [["amount", "Amount"], ["datetime", "Date / time"], ["utr", "UTR / RRN"]];
+  const CASE = [["victim_bank", "Victim bank"], ["victim_account_last4", "A/c last 4"], ["payment_mode", "Payment mode"],
+    ["called_bank", "Called bank?"], ["suspect_phone", "Suspect phone"], ["suspect_upi", "Suspect UPI"],
+    ["suspect_bank", "Suspect bank"], ["district", "District"], ["victim_name", "Victim name"], ["victim_mobile", "Victim mobile"]];
+  let token = "", current = null, selected = null, refreshTimer = null, liveSessions = {};
+
+  // --- auth: the token lives only in this closure
+  $("go").addEventListener("click", login);
+  $("token").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+  async function login() {
+    token = $("token").value.trim();
+    $("token").value = "";
+    const r = await api("GET", "/api/operator/queue");
+    if (!r) { $("loginErr").textContent = "Token rejected."; token = ""; return; }
+    $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+    renderQueue(r); metrics(); listen();
+  }
+  async function api(method, path, body) {
+    const opts = { method, headers: { "X-Operator-Token": token } };
+    if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    try {
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { if (current || method !== "GET") alert((data.detail || ("Error " + res.status))); return null; }
+      return data;
+    } catch (e) { return null; }
+  }
+
+  // --- queue
+  function fmtWait(s) { return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${Math.floor(s / 3600)}h`; }
+  function itemHTML(it, kind) {
+    const chips = [];
+    if (kind === "handoff") chips.push(`<span class="chip red">${esc(it.reason_label || it.handoff_reason)}</span>`);
+    if (it.status === "claimed") chips.push(`<span class="chip ok">claimed</span>`);
+    if (it.has_verify) chips.push(`<span class="chip warn">⚠ verify</span>`);
+    if (kind === "done") chips.push(`<span class="chip ${it.status === "approved" ? "ok" : "warn"}">${esc(it.status)}</span>`);
+    return `<div class="item ${it.id === selected ? "sel" : ""}" data-id="${esc(it.id)}" title="Why here: ${esc(it.why_here)}">
+      <div class="top"><span>${kind === "review" ? "#" + (it.pos + 1) + " · " : ""}${esc(it.id)}</span><span class="muted">${fmtWait(it.waiting_s)}</span></div>
+      <div>${esc(it.fraud_label)} · ${it.n_txns} txn · ${esc(it.lang)} ${chips.join(" ")}</div>
+      ${kind === "review" ? `<div class="why">why here: ${esc(it.why_here)}</div>` : ""}</div>`;
+  }
+  function renderQueue(q) {
+    $("handoffs").innerHTML = q.handoffs.map(i => itemHTML(i, "handoff")).join("") || '<div class="empty">None</div>';
+    $("review").innerHTML = q.review.map(i => itemHTML(i, "review")).join("") || '<div class="empty">Queue empty</div>';
+    $("done").innerHTML = q.done.map(i => itemHTML(i, "done")).join("") || '<div class="empty">—</div>';
+    $("nHand").textContent = q.handoffs.length; $("nRev").textContent = q.review.length;
+    $("audit").innerHTML = q.audit.map(a => `<div><b>${esc(a.packet_id)}</b> ${a.event === "reorder" ? `#${a.from_pos === null ? "new" : a.from_pos + 1} → #${a.to_pos + 1}` : esc(a.event)} · ${esc(a.reason)} <span class="muted">${new Date(a.at * 1000).toLocaleTimeString()}</span></div>`).join("");
+    liveSessions = {};
+    q.live.forEach(l => liveSessions[l.session] = l);
+    renderLive();
+  }
+  function renderLive() {
+    const ls = Object.values(liveSessions);
+    $("nLive").textContent = ls.length;
+    $("live").innerHTML = ls.map(l => {
+      const txns = (l.txns || []).map(t => `T${t.index + 1}: ${esc(t.amount.display)} · ${esc(t.datetime.display)} · ${esc(t.utr.display)}`).join("<br>");
+      const f = l.fields || {};
+      return `<div class="item"><div class="top"><span>call ${esc(l.session)}</span><span class="muted">${esc(l.state)} · ${Math.round(l.elapsed_s)}s</span></div>
+        <div>${txns || '<span class="muted">listening…</span>'}</div>
+        <div class="muted">${f.victim_bank ? esc(f.victim_bank.display) : ""} ${f.suspect_phone && f.suspect_phone.value ? "· suspect " + esc(f.suspect_phone.display) : ""}</div></div>`;
+    }).join("") || '<div class="empty">No calls right now</div>';
+  }
+  document.querySelector("main").addEventListener("click", e => {
+    const it = e.target.closest(".item[data-id]"); if (it) openPacket(it.dataset.id);
+  });
+  async function refresh() {
+    const q = await api("GET", "/api/operator/queue");
+    if (q) renderQueue(q);
+    metrics();
+    if (selected) { const p = await api("GET", "/api/operator/packet/" + encodeURIComponent(selected)); if (p) renderPacket(p); }
+  }
+  const soon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 250); };
+
+  async function metrics() {
+    try {
+      const m = await (await fetch("/api/metrics")).json();
+      const pct = m.containment_rate === null ? "—" : Math.round(m.containment_rate * 100) + "%";
+      const s = (x) => x === null || x === undefined ? "—" : x < 60 ? Math.round(x) + " s" : (x / 60).toFixed(1) + " min";
+      $("metrics").innerHTML = `<span>Calls handled by AI <b>${m.calls_handled_by_ai}/${m.calls_total}</b> (${pct})</span>
+        <span>Handoffs <b>${m.handoffs}</b></span><span>Median handling <b>${s(m.median_handling_s)}</b></span>
+        <span>Median approval <b>${s(m.median_approval_s)}</b></span>`;
+    } catch (e) {}
+  }
+
+  // --- packet
+  async function openPacket(id) {
+    selected = id;
+    const p = await api("GET", "/api/operator/packet/" + encodeURIComponent(id));
+    if (p) renderPacket(p);
+    document.querySelectorAll(".item[data-id]").forEach(el => el.classList.toggle("sel", el.dataset.id === id));
+  }
+  function chips(f) {
+    if (!f || (f.value === null && f.status !== "unconfirmed")) return "";
+    if (f.verify) return '<span class="chip warn">⚠ verify</span>';
+    if (f.status === "skipped") return '<span class="chip src">skipped</span>';
+    const extra = f.corrections ? ` · corrected ${f.corrections}×` : "";
+    return `<span class="chip ok">✓</span> <span class="chip src">${esc(f.source || "")}${extra}</span>`;
+  }
+  function fieldRow(label, f, key, txn) {
+    const v = f ? f.display : "—";
+    const editable = current && ["ready_for_review", "claimed"].includes(current.status);
+    return `<tr class="${f && f.verify ? "verify" : ""}"><th>${esc(label)}</th><td class="v">${esc(v)} ${chips(f)}
+      ${editable ? `<button class="edit" data-field="${key}" data-txn="${txn ?? ""}">Edit</button>` : ""}</td></tr>`;
+  }
+  function renderPacket(p) {
+    current = p;
+    $("packetEmpty").classList.add("hidden"); $("packet").classList.remove("hidden");
+    $("pTitle").textContent = p.id + " · " + p.fraud_label;
+    $("pStatus").innerHTML = `<span class="chip ${p.status === "approved" ? "ok" : p.status === "needs_human" ? "red" : "warn"}">${esc(p.status)}</span>`;
+    $("pReason").innerHTML = p.handoff_reason ? `<p><span class="chip red">${esc(p.handoff_reason)}</span> Warm handoff: the caller should not have to repeat the story. Read the transcript and the captured fields below.</p>` : "";
+    let rows = "";
+    p.txns.forEach((t, i) => {
+      rows += `<tr><th colspan="2" style="padding-top:10px">Transaction ${i + 1}</th></tr>`;
+      TXN.forEach(([k, l]) => rows += fieldRow(l, t[k], k, i));
+    });
+    rows += `<tr><th>Total</th><td class="v"><b>${esc(p.total_display)}</b> (${p.txns.length} transaction${p.txns.length === 1 ? "" : "s"})</td></tr>`;
+    rows += `<tr><th colspan="2" style="padding-top:10px">Case</th></tr>`;
+    CASE.forEach(([k, l]) => rows += fieldRow(l, p.fields[k], k, null));
+    $("pFields").innerHTML = rows;
+    $("pText").textContent = p.text;
+    const hand = p.status === "needs_human";
+    $("claimBtn").classList.toggle("hidden", !hand);
+    $("approveBtn").disabled = !["ready_for_review", "claimed"].includes(p.status);
+    $("rejectBtn").disabled = !["ready_for_review", "claimed"].includes(p.status);
+    $("addTxnBtn").disabled = !["ready_for_review", "claimed"].includes(p.status);
+    $("transcriptBox").classList.toggle("hidden", !p.transcript);
+    $("transcript").innerHTML = (p.transcript || []).map(t => `<div>🗣 ${esc(t)}</div>`).join("") || '<div class="empty">No speech</div>';
+  }
+  $("pFields").addEventListener("click", async e => {
+    const b = e.target.closest("button.edit"); if (!b || !current) return;
+    const field = b.dataset.field, txn = b.dataset.txn === "" ? null : Number(b.dataset.txn);
+    const hint = field === "datetime" ? " (dd-mm-yyyy hh:mm)" : field === "called_bank" ? " (yes/no)" : "";
+    const value = prompt(`New value for ${field}${txn !== null ? " (transaction " + (txn + 1) + ")" : ""}${hint}:`);
+    if (!value) return;
+    const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/edit`, { field, txn_index: txn, value });
+    if (p) { renderPacket(p); soon(); }
+  });
+  $("addTxnBtn").addEventListener("click", async () => {
+    if (!current) return;
+    const value = prompt("Amount of the new transaction (₹):");
+    if (!value) return;
+    const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/edit`, { field: "amount", txn_index: current.txns.length, value });
+    if (p) { renderPacket(p); soon(); }
+  });
+  async function act(path, body) {
+    if (!current) return;
+    const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/${path}`, body);
+    if (p) { renderPacket(p); soon(); }
+  }
+  $("claimBtn").addEventListener("click", () => act("claim"));
+  $("approveBtn").addEventListener("click", () => act("approve"));
+  $("rejectBtn").addEventListener("click", () => { const r = prompt("Reason for rejecting:"); if (r) act("reject", { reason: r }); });
+  $("copyBtn").addEventListener("click", () => current && navigator.clipboard.writeText(current.text).then(() => $("copyBtn").textContent = "Copied ✓"));
+  $("jsonBtn").addEventListener("click", () => {
+    if (!current) return;
+    const blob = new Blob([JSON.stringify(current, null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = current.id + ".json"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // --- live updates: SSE over fetch so the token travels in a header, never in a URL
+  async function listen() {
+    for (;;) {
+      try {
+        const res = await fetch("/api/events", { headers: { "X-Operator-Token": token } });
+        if (!res.ok || !res.body) throw new Error("sse");
+        $("dot").classList.add("on");
+        const reader = res.body.getReader(), dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let i;
+          while ((i = buf.indexOf("\n\n")) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+        }
+      } catch (e) {}
+      $("dot").classList.remove("on");
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  function handle(block) {
+    let ev = "message", data = "";
+    block.split("\n").forEach(l => { if (l.startsWith("event: ")) ev = l.slice(7); else if (l.startsWith("data: ")) data += l.slice(6); });
+    if (!data) return;
+    const d = JSON.parse(data);
+    if (ev === "live_fields") {
+      if (d.state === "QUEUED" || String(d.state).startsWith("HANDOFF")) delete liveSessions[d.session];
+      else liveSessions[d.session] = d;
+      renderLive();
+    } else soon();
+  }
+  setInterval(() => { if (token) soon(); }, 15000);  // waiting times tick; overdue items move up
+})();
+</script>
+</body>
+</html>

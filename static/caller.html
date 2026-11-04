@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberMitra</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1b1b1b; --muted:#666; --card:#fff; --line:#ddd; --red:#c62828; --ok:#2e7d32; --warn:#b26a00; --accent:#1f4fa3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --fg:#eee; --muted:#aaa; --card:#1e1e1e; --line:#333; --accent:#7aa7ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui, "Noto Sans Tamil", sans-serif; }
+  header { position:sticky; top:0; background:var(--bg); padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:center; z-index:5; }
+  header h1 { font-size:18px; margin:0; flex:1; }
+  .call { background:var(--red); color:#fff; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:8px; font-size:18px; display:inline-block; }
+  .banner { background:#fff3cd; color:#5c4400; padding:8px 16px; font-size:14px; }
+  main { max-width:680px; margin:0 auto; padding:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
+  h2 { font-size:15px; margin:0 0 8px; color:var(--muted); font-weight:600; }
+  h3 { font-size:14px; margin:10px 0 4px; }
+  button { font:inherit; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); padding:10px 14px; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  #ptt { width:100%; padding:22px; font-size:20px; font-weight:700; touch-action:none; user-select:none; }
+  #ptt.rec { background:var(--red); color:#fff; border-color:var(--red); }
+  #prompt { font-size:18px; }
+  #transcript { color:var(--muted); font-size:14px; margin-top:6px; min-height:1em; }
+  textarea, input[type=text] { width:100%; font:inherit; padding:8px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  textarea { min-height:80px; }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  td { padding:5px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.k { color:var(--muted); width:36%; }
+  tr.editable { cursor:pointer; }
+  tr.editable td:last-child::after { content:" ✎"; color:var(--accent); }
+  .chip { font-size:12px; padding:2px 7px; border-radius:10px; border:1px solid var(--line); margin-left:6px; white-space:nowrap; }
+  .chip.confirmed { color:var(--ok); border-color:var(--ok); }
+  .chip.unconfirmed, .chip.pending { color:var(--warn); border-color:var(--warn); }
+  #rbDigits { font-size:44px; font-weight:700; letter-spacing:6px; text-align:center; font-variant-numeric:tabular-nums; margin:8px 0; word-break:break-all; }
+  #rbDigits.text { font-size:24px; letter-spacing:0; }
+  .row { display:flex; gap:10px; }
+  .row > button { flex:1; font-size:22px; padding:16px; }
+  .small > button { font-size:16px; padding:10px; }
+  .yes { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .no { background:var(--red); color:#fff; border-color:var(--red); }
+  #numpad { display:none; }
+  #numDisplay { font-size:28px; text-align:center; letter-spacing:4px; min-height:40px; padding:6px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; font-variant-numeric:tabular-nums; }
+  .pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .pad button { font-size:22px; padding:14px; }
+  pre { white-space:pre-wrap; font:14px/1.5 ui-monospace, Consolas, monospace; background:var(--bg); padding:10px; border-radius:8px; border:1px solid var(--line); }
+  .hidden { display:none !important; }
+  footer { color:var(--muted); font-size:13px; text-align:center; padding:20px 16px 40px; }
+  .handoff { border-color:var(--red); }
+  label { display:flex; gap:8px; align-items:flex-start; }
+  ol { padding-left:20px; margin:6px 0; } li { margin:4px 0; }
+  .draft { font-size:11px; color:var(--warn); border:1px solid var(--warn); border-radius:8px; padding:0 5px; margin-left:4px; white-space:nowrap; }
+  .ref { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="appName">CyberMitra</h1>
+  <a class="call" href="tel:1930">📞 Call 1930</a>
+</header>
+<div id="banner" class="banner hidden"></div>
+<main>
+  <section id="start">
+    <h2>Before we start / தொடங்கும் முன்</h2>
+    <p>An <b>AI assistant</b> will take down what happened, read the numbers back to you, and send a <b>draft</b> to a cyber-crime officer for review. It is not the police, cannot freeze money, and does not file a complaint by itself. Audio is not stored.</p>
+    <p>ஒரு <b>AI உதவியாளர்</b> நடந்ததை கேட்டு, நம்பர்களை திரும்ப படித்து, ஒரு <b>வரைவை</b> அதிகாரியின் சரிபார்ப்புக்கு அனுப்பும். இது போலீஸ் இல்லை, பணத்தை முடக்க முடியாது. ஆடியோ சேமிக்கப்படாது.</p>
+    <label><input type="checkbox" id="consent"> I understand and agree / புரிந்துகொண்டேன்</label>
+    <p class="row" style="margin-top:12px">
+      <button class="primary" data-lang="ta" disabled>தமிழில் தொடங்கு</button>
+      <button class="primary" data-lang="en" disabled>Start in English</button>
+    </p>
+  </section>
+
+  <div id="app" class="hidden">
+    <section>
+      <div id="prompt"></div>
+      <div id="transcript"></div>
+    </section>
+
+    <section id="handoff" class="handoff hidden">
+      <h2 id="handoffTitle">Connecting you to an officer</h2>
+      <p id="handoffText"></p>
+      <p id="claimed" class="hidden"><b>✓ An officer has your details (simulated transfer in this demo).</b></p>
+      <p><a class="call" href="tel:1930">Call 1930</a> &nbsp; <a id="manas" class="call hidden" href="tel:14416">Tele-MANAS 14416</a></p>
+      <p><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">cybercrime.gov.in</a></p>
+    </section>
+
+    <section id="ask" class="hidden">
+      <h2 id="askLabel"></h2>
+      <div class="row">
+        <button class="yes" id="askYes">✓ ஆமா / Yes</button>
+        <button class="no" id="askNo">✗ இல்ல / No</button>
+      </div>
+    </section>
+
+    <section id="readback" class="hidden">
+      <h2 id="rbLabel"></h2>
+      <div id="rbDigits"></div>
+      <div class="row">
+        <button class="yes" id="rbYes">✓ சரி</button>
+        <button class="no" id="rbNo">✗ தப்பு</button>
+      </div>
+    </section>
+
+    <section id="numpad">
+      <h2 id="npLabel">Type it / டைப் செய்யுங்கள்</h2>
+      <div id="numDisplay"></div>
+      <div class="pad" id="pad"></div>
+      <p class="row small" style="margin-top:8px"><button id="npCancel">Cancel</button><button id="npSend" class="primary">Done ✓</button></p>
+    </section>
+
+    <section id="typeBox" class="hidden">
+      <h2 id="typeLabel">Or type it / டைப் செய்யுங்கள்</h2>
+      <p class="row small"><input id="typeInput" type="text" maxlength="80" autocomplete="off" style="flex:3">
+      <button id="typeSend" class="primary" style="flex:1">OK</button></p>
+      <p id="typeHint" style="color:var(--muted);font-size:13px;margin:0"></p>
+    </section>
+
+    <section id="talk">
+      <button id="ptt">🎤 Hold to talk / அழுத்திப் பேசுங்கள்</button>
+      <p class="row small" style="margin-top:8px">
+        <button id="skipBtn">Skip / தவிர்</button>
+        <button id="humanBtn">👤 Talk to a person</button>
+      </p>
+    </section>
+
+    <section id="smsBox">
+      <h2>Paste bank SMS / பேங்க் SMS பேஸ்ட் செய்யுங்கள்</h2>
+      <textarea id="sms" placeholder="Rs.50,000 debited ... UPI Ref No 4306XXXXXXXX&#10;(paste several SMS: one per debit)"></textarea>
+      <p><button id="smsSend">Use SMS</button></p>
+    </section>
+
+    <section id="detailsBox">
+      <h2>Details so far / விவரங்கள் <span id="editHint" class="hidden" style="font-weight:400">— tap a row to fix it</span></h2>
+      <div id="txnTables"></div>
+      <h3>Case</h3>
+      <table id="fields"></table>
+    </section>
+
+    <section id="summaryBox" class="hidden">
+      <h2>Your summary / உங்கள் சுருக்கம்</h2>
+      <div class="ref" id="refId"></div>
+      <p id="refNote" style="color:var(--muted);font-size:13px;margin-top:2px"></p>
+      <p id="totals"></p>
+      <h3>What to do now / இப்போது செய்ய வேண்டியவை</h3>
+      <ol id="steps"></ol>
+      <p class="row small"><button id="copyBtn" class="primary">Copy</button><button id="shareBtn">Share</button></p>
+    </section>
+  </div>
+</main>
+<footer>Not affiliated with MHA, I4C, NCRP or Tamil Nadu Police. Draft only — always call 1930 and file at cybercrime.gov.in.</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const TXN_LABELS = { amount:"Amount / தொகை", datetime:"When / நேரம்", utr:"UTR / Ref" };
+  const LABELS = { victim_bank:"Your bank / உங்க பேங்க்", payment_mode:"Paid via / வழி", suspect_phone:"Caller's number / கால் வந்த நம்பர்",
+    suspect_upi:"Their UPI ID", suspect_bank:"Their bank", called_bank:"Called your bank? / பேங்க்கு கால்",
+    district:"District / மாவட்டம்", victim_name:"Your name / பெயர்", victim_mobile:"Your mobile / மொபைல்" };
+  const ALL_LABELS = Object.assign({}, TXN_LABELS, LABELS);
+  const ASK_LABELS = { more_txn:"Another transaction? / இன்னொரு transaction?", review:"Is everything correct? / எல்லாம் சரியா?",
+    dup_utr:"Same transaction as before? / முன்னாடி சொன்னதா?", called_bank:"Already called your bank? / பேங்க்கு கால் பண்ணீங்களா?" };
+  const DIGIT_FIELDS = ["amount", "utr", "suspect_phone", "victim_mobile"];
+  const TEXT_HINTS = { victim_bank:"e.g. SBI", suspect_bank:"e.g. HDFC", payment_mode:"UPI / card / net banking",
+    datetime:"e.g. yesterday 3 pm / 2 Nov 15:30", suspect_upi:"e.g. name@ybl", victim_name:"", district:"e.g. Madurai",
+    called_bank:"yes / no" };
+  let sid = null, last = null, numpadTarget = null, numBuf = "", typeTarget = null, audioQueue = [], poll = null;
+  const player = new Audio();
+
+  // --- consent + start
+  $("consent").addEventListener("change", e => document.querySelectorAll("[data-lang]").forEach(b => b.disabled = !e.target.checked));
+  document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", async () => {
+    const r = await api("/api/session", { lang: b.dataset.lang, consent: true });
+    if (!r) return;
+    sid = r.session_id;
+    $("start").classList.add("hidden"); $("app").classList.remove("hidden");
+    render(r);
+  }));
+
+  async function api(path, body, isForm, method) {
+    try {
+      const opts = { method: method || "POST" };
+      if (isForm) opts.body = body;
+      else if (body !== undefined) { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body || {}); }
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { $("prompt").textContent = (data.prompt && data.prompt.text) || ("Error " + res.status + ". Please call 1930."); return null; }
+      return data;
+    } catch (e) { $("prompt").textContent = "Network error. Please call 1930."; return null; }
+  }
+
+  // --- audio playback (sequential)
+  function play(urls) { audioQueue = (urls || []).slice(); player.pause(); next(); }
+  function next() { const u = audioQueue.shift(); if (!u) return; player.src = u; player.onended = next; player.play().catch(() => {}); }
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+  const show = (id, on) => $(id).classList.toggle("hidden", !on);
+  function chip(f) {
+    if (!f || f.status === "empty") return "";
+    const label = f.verify ? "⚠ verify" : f.status === "skipped" ? "skipped" : "✓ " + (f.source || "");
+    return `<span class="chip ${esc(f.status)}">${esc(label)}</span>`;
+  }
+
+  // --- render
+  function render(r) {
+    last = r;
+    if (r.demo_banner) { $("banner").textContent = r.demo_banner; show("banner", true); }
+    $("prompt").textContent = r.prompt.text || "";
+    $("transcript").textContent = r.transcript ? "🗣 " + r.transcript : "";
+    play(r.prompt.audio_urls);
+    const done = r.state === "QUEUED" || !!r.handoff;
+    const reviewing = r.state === "REVIEW";
+    // transactions
+    $("txnTables").innerHTML = r.txns.map(t => {
+      const rows = Object.keys(TXN_LABELS).map(k => row(k, t[k], t.index, reviewing)).join("");
+      return `<h3>Transaction ${t.index + 1}</h3><table>${rows}</table>`;
+    }).join("");
+    $("fields").innerHTML = Object.keys(LABELS).map(k => row(k, r.fields[k], null, reviewing)).join("");
+    show("editHint", reviewing);
+    // yes/no question
+    show("ask", !!r.ask && !done);
+    if (r.ask) $("askLabel").textContent = ASK_LABELS[r.ask] || r.ask;
+    // readback
+    if (r.readback && !done) {
+      show("readback", true);
+      const rb = r.readback, f = fieldOf(rb.field, rb.txn_index);
+      const tx = rb.txn_index !== null && rb.txn_index !== undefined && r.txns.length > 1 ? `Transaction ${rb.txn_index + 1} · ` : "";
+      $("rbLabel").textContent = tx + (ALL_LABELS[rb.field] || rb.field) + (rb.total_chunks > 1 ? ` (${rb.chunk_index + 1}/${rb.total_chunks})` : "");
+      const whole = ["amount", "datetime"].includes(rb.field) || !DIGIT_FIELDS.includes(rb.field) && rb.field !== "suspect_upi";
+      $("rbDigits").textContent = whole && f ? f.display : rb.chunk_display;
+      $("rbDigits").classList.toggle("text", !DIGIT_FIELDS.includes(rb.field));
+    } else show("readback", false);
+    // numpad: offered for number questions, on ✗, or when the two transcripts disagreed
+    const np = r.numpad || (r.readback && r.readback.numpad ? { field: r.readback.field, txn_index: r.readback.txn_index } : null)
+      || (r.state === "GAP_FILL" && DIGIT_FIELDS.includes(r.current_field) ? { field: r.current_field, txn_index: r.current_txn } : null);
+    if (np && np.field && !done) openNumpad(np.field, np.txn_index); else if (!reviewing) closeNumpad();
+    // typed entry for text fields
+    const cur = r.current_field;
+    if (["GAP_FILL", "READBACK"].includes(r.state) && cur && cur in TEXT_HINTS && !done) openType(cur, r.current_txn);
+    else if (!reviewing) closeType();
+    // end states
+    show("talk", !done); show("smsBox", !done);
+    if (r.handoff) {
+      show("handoff", true);
+      $("handoffText").textContent = r.prompt.text;
+      $("handoffTitle").textContent = r.handoff === "HANDOFF_WELLBEING" ? "Please get help now" : "Connecting you to an officer";
+      show("manas", r.handoff === "HANDOFF_WELLBEING");
+      startPoll();
+    }
+    if (r.summary) showSummary(r.summary);
+  }
+  function fieldOf(name, txn) {
+    if (!last) return null;
+    if (name in TXN_LABELS) return last.txns[txn ?? 0] ? last.txns[txn ?? 0][name] : null;
+    return last.fields[name];
+  }
+  function row(k, f, txn, editable) {
+    if (!f) return "";
+    const attrs = editable ? ` class="editable" data-field="${k}" data-txn="${txn ?? ""}"` : "";
+    return `<tr${attrs}><td class="k">${ALL_LABELS[k]}</td><td>${esc(f.display)}${chip(f)}</td></tr>`;
+  }
+  // tap a row during REVIEW to fix it (typed input is authoritative)
+  $("detailsBox").addEventListener("click", e => {
+    const tr = e.target.closest("tr.editable"); if (!tr) return;
+    const field = tr.dataset.field, txn = tr.dataset.txn === "" ? null : Number(tr.dataset.txn);
+    if (DIGIT_FIELDS.includes(field)) { closeType(); openNumpad(field, txn); $("numpad").scrollIntoView({ behavior: "smooth" }); }
+    else { closeNumpad(); openType(field, txn); $("typeBox").scrollIntoView({ behavior: "smooth" }); }
+  });
+
+  function showSummary(s) {
+    show("summaryBox", true);
+    $("refId").textContent = s.packet_id || "";
+    $("refNote").textContent = "Draft reference — not an NCRP acknowledgement. An officer reviews it before anything is filed.";
+    $("totals").textContent = s.n_txns ? `${s.n_txns} transaction(s), total ${s.total_display}` : "";
+    $("steps").innerHTML = s.next_steps.map(x => `<li>${esc(x.text)}${x.draft ? '<span class="draft">draft guidance</span>' : ""}</li>`).join("");
+    $("summaryBox").dataset.text = s.text;
+    show("claimed", !!s.operator_claimed);
+  }
+  function startPoll() {
+    if (poll) return;
+    poll = setInterval(async () => {
+      const s = await api(`/api/session/${sid}/summary`, undefined, false, "GET");
+      if (s) { showSummary(s); if (s.operator_claimed) { clearInterval(poll); } }
+    }, 5000);
+  }
+
+  // --- yes/no question buttons (authoritative)
+  $("askYes").addEventListener("click", () => answerAsk("yes"));
+  $("askNo").addEventListener("click", () => answerAsk("no"));
+  async function answerAsk(answer) {
+    if (!last || !last.ask) return;
+    const r = await api(`/api/session/${sid}/confirm`, { field: last.ask, answer });
+    if (r) render(r);
+  }
+
+  // --- read-back buttons (authoritative)
+  $("rbYes").addEventListener("click", () => confirmChunk("yes"));
+  $("rbNo").addEventListener("click", () => confirmChunk("no"));
+  async function confirmChunk(answer) {
+    if (!last || !last.readback) return;
+    const rb = last.readback;
+    const r = await api(`/api/session/${sid}/confirm`, { field: rb.field, txn_index: rb.txn_index, chunk_index: rb.chunk_index, answer });
+    if (r) render(r);
+  }
+
+  // --- numpad
+  const keys = ["1","2","3","4","5","6","7","8","9","⌫","0","C"];
+  $("pad").innerHTML = keys.map(k => `<button data-k="${k}">${k}</button>`).join("");
+  $("pad").addEventListener("click", e => {
+    const k = e.target.dataset.k; if (!k) return;
+    if (k === "⌫") numBuf = numBuf.slice(0, -1); else if (k === "C") numBuf = ""; else if (numBuf.length < 14) numBuf += k;
+    $("numDisplay").textContent = numBuf;
+  });
+  function openNumpad(field, txn) {
+    const key = field + "#" + (txn ?? "");
+    if (!numpadTarget || numpadTarget.key !== key) { numBuf = ""; $("numDisplay").textContent = ""; }
+    numpadTarget = { field, txn_index: txn ?? null, key };
+    $("npLabel").textContent = "Type " + (ALL_LABELS[field] || field) + (txn !== null && txn !== undefined && last && last.txns.length > 1 ? ` (transaction ${txn + 1})` : "");
+    $("numpad").style.display = "block";
+  }
+  function closeNumpad() { numpadTarget = null; $("numpad").style.display = "none"; }
+  $("npCancel").addEventListener("click", closeNumpad);
+  $("npSend").addEventListener("click", async () => {
+    if (!numpadTarget || !numBuf) return;
+    const r = await api(`/api/session/${sid}/numpad`, { field: numpadTarget.field, txn_index: numpadTarget.txn_index, digits: numBuf });
+    numBuf = ""; $("numDisplay").textContent = "";
+    if (r) { if (last && last.state === "REVIEW") closeNumpad(); render(r); }
+  });
+
+  // --- typed text
+  function openType(field, txn) {
+    const key = field + "#" + (txn ?? "");
+    if (!typeTarget || typeTarget.key !== key) $("typeInput").value = "";
+    typeTarget = { field, txn_index: txn ?? null, key };
+    $("typeLabel").textContent = "Or type " + (ALL_LABELS[field] || field);
+    $("typeInput").placeholder = TEXT_HINTS[field] || "";
+    $("typeHint").textContent = "";
+    show("typeBox", true);
+  }
+  function closeType() { typeTarget = null; show("typeBox", false); }
+  async function sendTyped() {
+    const v = $("typeInput").value.trim();
+    if (!typeTarget || !v) return;
+    const wasReview = last && last.state === "REVIEW";
+    const r = await api(`/api/session/${sid}/numpad`, { field: typeTarget.field, txn_index: typeTarget.txn_index, digits: v });
+    if (!r) return;
+    if (r.numpad && r.numpad.error) { $("typeHint").textContent = "That doesn't look right — please check and try again."; return; }
+    $("typeInput").value = "";
+    if (wasReview) closeType();
+    render(r);
+  }
+  $("typeSend").addEventListener("click", sendTyped);
+  $("typeInput").addEventListener("keydown", e => { if (e.key === "Enter") sendTyped(); });
+
+  // --- SMS / skip / human
+  $("smsSend").addEventListener("click", async () => {
+    const t = $("sms").value.trim(); if (!t) return;
+    const r = await api(`/api/session/${sid}/sms`, { text: t });
+    if (r) { $("sms").value = ""; render(r); }
+  });
+  $("skipBtn").addEventListener("click", async () => {
+    if (!last) return;
+    let body = null;
+    if (last.state === "NARRATIVE") body = { field: "amount" };
+    else if (last.state === "ASK_MORE_TXN") body = { field: "more_txn" };
+    else if (last.current_field) body = { field: last.current_field, txn_index: last.current_txn };
+    if (!body) return;
+    const r = await api(`/api/session/${sid}/skip`, body);
+    if (r) render(r);
+  });
+  $("humanBtn").addEventListener("click", async () => { const r = await api(`/api/session/${sid}/human`, {}); if (r) render(r); });
+
+  // --- summary copy / share
+  const summaryText = () => $("summaryBox").dataset.text || "";
+  $("copyBtn").addEventListener("click", () => navigator.clipboard.writeText(summaryText()).then(() => $("copyBtn").textContent = "Copied ✓"));
+  $("shareBtn").addEventListener("click", () => {
+    const text = summaryText();
+    if (navigator.share) navigator.share({ title: "Cyber fraud summary", text }).catch(() => {});
+    else navigator.clipboard.writeText(text).then(() => $("shareBtn").textContent = "Copied ✓");
+  });
+
+  // --- push to talk
+  let rec = null, chunks = [], stopTimer = null, stream = null;
+  const ptt = $("ptt");
+  async function startRec(e) {
+    e.preventDefault();
+    if (rec || !sid) return;
+    try { stream = stream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (err) { $("prompt").textContent = "Microphone blocked. You can still paste the SMS or use the keypad."; return; }
+    player.pause();
+    chunks = [];
+    const mime = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+    rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
+    rec.onstop = upload;
+    rec.start();
+    ptt.classList.add("rec"); ptt.textContent = "● Recording… release to send";
+    stopTimer = setTimeout(stopRec, 25000);  // hard stop at 25 s
+  }
+  function stopRec() {
+    clearTimeout(stopTimer);
+    if (rec && rec.state !== "inactive") rec.stop();
+    ptt.classList.remove("rec"); ptt.textContent = "🎤 Hold to talk / அழுத்திப் பேசுங்கள்";
+  }
+  async function upload() {
+    const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+    rec = null;
+    if (blob.size < 1000) return;
+    const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
+    const fd = new FormData(); fd.append("audio", blob, "clip." + ext);
+    ptt.disabled = true; $("transcript").textContent = "…";
+    const r = await api(`/api/session/${sid}/turn`, fd, true);
+    ptt.disabled = false;
+    if (r) render(r);
+  }
+  ptt.addEventListener("pointerdown", startRec);
+  ptt.addEventListener("pointerup", stopRec);
+  ptt.addEventListener("pointerleave", () => rec && stopRec());
+  ptt.addEventListener("keydown", e => { if (e.code === "Space" && !e.repeat) startRec(e); });
+  ptt.addEventListener("keyup", e => { if (e.code === "Space") stopRec(); });
+
+  window.addEventListener("pagehide", () => {
+    // a finished call keeps its session for the summary; an abandoned one is dropped
+    if (sid && last && last.state !== "QUEUED" && !last.handoff) fetch(`/api/session/${sid}`, { method: "DELETE", keepalive: true });
+  });
+})();
+</script>
+</body>
+</html>

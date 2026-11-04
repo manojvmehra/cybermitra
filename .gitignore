@@ -1,0 +1,21 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+logs/
+# acted audio stays local
+bench/corpus/**/*.wav
+bench/corpus/**/*.mp3
+bench/corpus/**/*.m4a
+bench/corpus/**/*.ogg
+bench/corpus/**/*.webm
+bench/noise/
+bench/augmented/
+bench/probe/*.jsonl
+bench/results/
