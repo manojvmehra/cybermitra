@@ -528,7 +528,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 
 **`static/caller.html`** (meant for a phone):
 - Dark call-app look: near-black background, blue primary actions, glass cards, a faint rain animation (none for reduced motion). System fonts only: the CSP blocks external fonts.
-- In a call: timer, current question, mic with live level bars, scrollable transcript, SMS paste in an expandable panel.
+- In a call: timer, current question, mic and action buttons in one row, live level bars, tall scrollable transcript, SMS paste in an expandable panel. Up to 900px wide. From 768px the transcript sits beside the rest and stays in view; below that everything stacks.
 - Always visible: a small **Call 1930** `tel:` text link fixed to the bottom of the screen, and the DEMO banner.
 - Consent, language (Tamil/English), then one main **Start Call** button, which creates the session and shows the mic.
 - Tap-to-talk toggle (`MediaRecorder`, hard stop at 25 s): one tap starts, the next stops and sends, with a pulsing dot and a timer while recording. Paste-SMS box. A "Talk to a person" button.
