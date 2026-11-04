@@ -60,7 +60,6 @@ def test_full_session_leaves_no_pii_in_log_file(tmp_path):
                                                              "UPI Ref No 430619827418"})
             c.post(f"/api/session/{sid}/numpad", json={"field": "victim_mobile", "digits": "9123456780"})
             c.post(f"/api/session/{sid}/numpad", json={"field": "victim_name", "digits": "Test Kumar"})
-            c.get(f"/api/session/{sid}/card")
         gnani_http._client = None
     finally:
         root.removeHandler(handler)

@@ -6,6 +6,7 @@ Conditions: clean, snr10, snr5 (recorded street noise mixed by RMS), tel8k (300�
     python bench/augment.py [--conditions clean,snr10,...]
 Inputs : bench/corpus/<clip_id>.<ext>, bench/noise/*.wav
 Outputs: bench/augmented/<condition>/<clip_id>.wav (16 kHz mono)
+Each clip × condition has its own seed, so adding a recording never changes the noise of the others.
 """
 
 import argparse
@@ -13,6 +14,7 @@ import io
 import subprocess
 import sys
 import wave
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +33,17 @@ def ffmpeg(data: bytes, *args: str) -> bytes:
 def to_pcm16k(data: bytes) -> np.ndarray:
     raw = ffmpeg(data, "-ac", "1", "-ar", "16000", "-f", "s16le")
     return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+
+
+def load_clip(path: Path) -> np.ndarray:
+    """Read by path, not through a pipe: phone .m4a files keep their index at the end, which needs seeking."""
+    p = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-i", str(path), "-vn",
+                        "-ac", "1", "-ar", "16000", "-f", "s16le", "pipe:1"], capture_output=True, check=True)
+    return np.frombuffer(p.stdout, dtype=np.int16).astype(np.float32) / 32768.0
+
+
+def clip_files(folder: Path) -> list[Path]:
+    return sorted(p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in EXTS and p.stem != "smoke")
 
 
 def write_wav(path: Path, x: np.ndarray, rate: int = 16000) -> None:
@@ -81,17 +94,19 @@ def main() -> int:
     ap.add_argument("--corpus", default=str(ROOT / "corpus"), help="folder of clean clips (e.g. bench/corpus/probe)")
     a = ap.parse_args()
     conds = a.conditions.split(",")
-    rng = np.random.default_rng(a.seed)
-    clips = sorted(p for p in Path(a.corpus).iterdir() if p.suffix in EXTS and p.stem != "smoke")
-    noises = [to_pcm16k(p.read_bytes()) for p in sorted((ROOT / "noise").glob("*.wav"))] \
-        if (ROOT / "noise").exists() else []
+    clips = clip_files(Path(a.corpus))
+    if not clips:
+        print(f"No clips in {a.corpus}.")
+        return 2
+    noises = [load_clip(p) for p in sorted((ROOT / "noise").glob("*.wav"))] if (ROOT / "noise").exists() else []
     if any(c.startswith("snr") for c in conds) and not noises:
-        print("No noise files in bench/noise/ — skipping SNR conditions.")
+        print("WARNING: no noise files in bench/noise/ — skipping SNR conditions. Results will not include them.")
         conds = [c for c in conds if not c.startswith("snr")]
     for clip in clips:
-        x = to_pcm16k(clip.read_bytes())
+        x = load_clip(clip)
         for c in conds:
             y = x
+            rng = np.random.default_rng([a.seed, zlib.crc32(f"{clip.stem}|{c}".encode())])
             if c.startswith("snr"):
                 snr = float(c.split("_")[0][3:])
                 y = mix_snr(x, noises[int(rng.integers(0, len(noises)))], snr, rng)

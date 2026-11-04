@@ -4,7 +4,7 @@
 
 Makes no API calls. For every clip x condition in bench/results/run.jsonl:
   1. the narrative turn is the real Prisma transcript (text + literal) of that clip;
-  2. per-slot answer clips are used when the manifest lists them (`turns: [{clip_id, slot}]`);
+  2. per-slot answer clips are used when the manifest lists them, in order, once each;
   3. otherwise an ORACLE caller answers: ✓/✗ per read-back chunk against ground truth (✗ then types the
      right chunk), types a missing field from the truth, skips a field with no truth, says "no more
      transactions" once the truth's transactions are in, and confirms the review.
@@ -12,11 +12,13 @@ So this measures how the dialogue behaves around real STT output; it is not a us
 no "accuracy after read-back". Writes bench/results/sim.jsonl; bench/report.py renders it.
 """
 
+import contextlib
 import json
 import sys
 import time
 import wave
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,8 @@ from app.dialog import packet as P  # noqa: E402
 from app.dialog import readback  # noqa: E402
 from app.dialog.models import DIGIT_FIELDS, TXN_FIELDS, Event, Session  # noqa: E402
 from app.dialog.state_machine import next_state  # noqa: E402
+from app.nlp import timeparse, validators  # noqa: E402
+from bench.corpus_lib import Call, load_calls, within_precision  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 TRUTH_ALIASES = {"bank": "victim_bank"}
@@ -49,9 +53,29 @@ def clip_seconds(clip_id: str, condition: str) -> float | None:
     return None
 
 
-def truth_of(row: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
+@contextlib.contextmanager
+def frozen_clock(ref: datetime | None) -> Iterator[None]:
+    """Make "now" the moment the caller is pretending to speak, so "nethu" means what the script meant."""
+    if ref is None:
+        yield
+        return
+
+    class Frozen(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> "Frozen":
+            return cls(ref.year, ref.month, ref.day, ref.hour, ref.minute, tzinfo=tz)
+
+    real = (timeparse.datetime, validators.datetime)
+    timeparse.datetime = validators.datetime = Frozen  # type: ignore[misc,assignment]
+    try:
+        yield
+    finally:
+        timeparse.datetime, validators.datetime = real  # type: ignore[misc,assignment]
+
+
+def truth_of(call_truth: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
     """-> (per-transaction truth, case truth, expected handoff)."""
-    t = dict(row.get("call_truth") or row.get("field_truth") or {})
+    t = dict(call_truth)
     handoff = t.pop("handoff", None)
     txns = t.pop("txns", None)
     if txns is None:
@@ -82,7 +106,8 @@ class Oracle:
                              answer="yes")
             want_chunks = readback.chunk(rb.field, want)
             if rb.field == "datetime":
-                ok = str(want)[:13] == rb.chunks[0][:13]  # same day and hour is "right" for a spoken time
+                f_ = s.field("datetime", rb.txn_index)
+                ok = within_precision(str(f_.value), str(want), f_.precision)
             else:
                 ok = len(want_chunks) == len(rb.chunks) and want_chunks[rb.index] == rb.chunks[rb.index]
             if rb.awaiting == "correct":
@@ -111,19 +136,23 @@ class Oracle:
         return None
 
 
-def simulate(row: dict[str, Any], run: dict[str, Any], runs_by_clip: dict[tuple[str, str], dict[str, Any]]
+def simulate(call: Call, run: dict[str, Any], runs_by_clip: dict[tuple[str, str], dict[str, Any]]
              ) -> dict[str, Any]:
-    txns_t, case_t, want_handoff = truth_of(row)
+    txns_t, case_t, want_handoff = truth_of(call.truth)
     cond = run["condition"]
-    turn_clips = {t["slot"]: t["clip_id"] for t in row.get("turns", []) if t.get("slot") != "narrative"}
+    turn_clips: dict[str, list[str]] = {}
+    for t in call.turns:
+        if t["slot"] != "narrative":
+            turn_clips.setdefault(t["slot"], []).append(t["clip_id"])
     used: set[str] = set()
     seconds = [clip_seconds(run["clip_id"], cond)]
     stt_ms = [run.get("latency_ms") or 0]
 
     def stt_for_slot(slot: str) -> dict[str, Any] | None:
-        cid = turn_clips.get(slot)
+        queue = turn_clips.get(slot) or []
+        cid = queue.pop(0) if queue else None
         r = runs_by_clip.get((cid, cond)) if cid else None
-        if cid is None or cid in used or r is None or "stt" not in r:
+        if cid is None or r is None or "stt" not in r:
             return None
         used.add(cid)
         seconds.append(clip_seconds(cid, cond))
@@ -133,18 +162,19 @@ def simulate(row: dict[str, Any], run: dict[str, Any], runs_by_clip: dict[tuple[
     oracle = Oracle(txns_t, case_t, stt_for_slot)
     s, acts = next_state(Session(lang="ta"), Event(type="START"))
     spoken = [a.text or "" for a in acts if a.type == "SpeakPrompt"]
-    s, acts = next_state(s, Event(type="AUDIO_TURN", text=run["stt"]["text"], literal=run["stt"].get("literal")))
-    spoken += [a.text or "" for a in acts if a.type == "SpeakPrompt"]
     steps = 0
-    while steps < MAX_STEPS and s.state not in ("QUEUED", "END") and not s.state.startswith("HANDOFF"):
-        ev = oracle.act(s)
-        if ev is None:
-            break
-        if ev.type in ("BUTTON", "NUMPAD", "SKIP"):
-            oracle.taps += 1
-        s, acts = next_state(s, ev)
+    with frozen_clock(call.reference_time):
+        s, acts = next_state(s, Event(type="AUDIO_TURN", text=run["stt"]["text"], literal=run["stt"].get("literal")))
         spoken += [a.text or "" for a in acts if a.type == "SpeakPrompt"]
-        steps += 1
+        while steps < MAX_STEPS and s.state not in ("QUEUED", "END") and not s.state.startswith("HANDOFF"):
+            ev = oracle.act(s)
+            if ev is None:
+                break
+            if ev.type in ("BUTTON", "NUMPAD", "SKIP"):
+                oracle.taps += 1
+            s, acts = next_state(s, ev)
+            spoken += [a.text or "" for a in acts if a.type == "SpeakPrompt"]
+            steps += 1
 
     status = "ready_for_review" if s.state == "QUEUED" else "needs_human" if s.handoff else "incomplete"
     pkt = P.build(s, status, s.handoff_reason)
@@ -166,7 +196,7 @@ def simulate(row: dict[str, Any], run: dict[str, Any], runs_by_clip: dict[tuple[
     tts_s = sum(len(x) for x in spoken) / CHARS_PER_S
     clip_s = sum(x for x in seconds if x is not None)
     return {
-        "clip_id": run["clip_id"], "condition": cond, "synthetic_tts": bool(row.get("synthetic_tts")),
+        "clip_id": run["clip_id"], "call_id": call.call_id, "condition": cond, "synthetic_tts": call.synthetic_tts,
         "final_state": s.state, "status": status, "handoff_reason": s.handoff_reason,
         "expected_handoff": want_handoff, "n_txns": len(pkt.txns), "expected_txns": len(txns_t),
         "corrections": oracle.corrections, "typed": oracle.typed, "unconfirmed": unconfirmed, "wrong_confirmed": wrong_confirmed,
@@ -181,15 +211,14 @@ def main() -> int:
     if not runs:
         print("No saved STT output. Run bench/run_benchmark.py first (this script makes no API calls).")
         return 2
-    manifest = {r["clip_id"]: r for r in load(ROOT / "manifest.jsonl")}
+    calls = {c.narrative["clip_id"]: c for c in load_calls(ROOT / "manifest.jsonl") if c.narrative}
     by_clip = {(r["clip_id"], r["condition"]): r for r in runs}
-    narrative_ids = {r["clip_id"] for r in manifest.values()}
     out = []
     for run in runs:
-        row = manifest.get(run["clip_id"])
-        if row is None or run["clip_id"] not in narrative_ids:
+        call = calls.get(run["clip_id"])
+        if call is None:  # an answer clip: used inside its call's simulation
             continue
-        out.append(simulate(row, run, by_clip))
+        out.append(simulate(call, run, by_clip))
         o = out[-1]
         print(f"  {o['clip_id']} [{o['condition']}] -> {o['status']}"
               f"{' (' + str(o['handoff_reason']) + ')' if o['handoff_reason'] else ''}"

@@ -129,16 +129,16 @@ def test_silent_clips_count_toward_turn_cap(client, mock_gnani, monkeypatch):
 
 
 def test_max_active_sessions(client, mock_gnani, monkeypatch):
-    from app.api import routes_caller as routes_session
+    from app.api import routes_caller
     from app.config import get_settings
 
     monkeypatch.setenv("MAX_ACTIVE_SESSIONS", "1")
     get_settings.cache_clear()
-    routes_session.SESSIONS.clear()
+    routes_caller.SESSIONS.clear()
     assert client.post("/api/session", json={"lang": "en", "consent": True}).status_code == 200
     r = client.post("/api/session", json={"lang": "en", "consent": True})
     assert r.status_code == 429 and r.json()["error"] == "server_busy"
-    routes_session.SESSIONS.clear()
+    routes_caller.SESSIONS.clear()
 
 
 def test_forwarded_for_ignored_unless_trusted(client, mock_gnani, monkeypatch):

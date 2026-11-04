@@ -3,7 +3,7 @@ ifeq ($(OS),Windows_NT)
 PY = .venv/Scripts/python
 endif
 
-.PHONY: setup run test probe prerender bench sim lint smoke
+.PHONY: setup run test probe prerender corpus bench sim lint smoke
 
 setup:
 	python -m venv .venv
@@ -25,13 +25,18 @@ probe:
 prerender:
 	$(PY) scripts/prerender_prompts.py
 
+corpus:
+	$(PY) bench/check_corpus.py
+
 bench:
 	$(PY) bench/augment.py
 	$(PY) bench/run_benchmark.py
+	$(PY) bench/simulate_calls.py
 	$(PY) bench/report.py
 
 sim:
 	$(PY) bench/simulate_calls.py
+	$(PY) bench/report.py
 
 lint:
 	$(PY) -m ruff check app tests scripts bench
