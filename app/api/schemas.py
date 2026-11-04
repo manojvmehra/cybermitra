@@ -56,6 +56,7 @@ class TurnResponse(BaseModel):
     fields: dict[str, dict[str, Any]]
     readback: dict[str, Any] | None = None
     numpad: dict[str, Any] | None = None
+    can_back: bool = False
     prompt: PromptOut
     handoff: str | None = None
     packet_id: str | None = None

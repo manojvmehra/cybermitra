@@ -9,13 +9,12 @@ from app.config import get_settings
 
 PROMPTS: dict[str, dict[str, str]] = {
     "OPENING": {
-        "ta": "வணக்கம். நான் {app}, ஒரு AI உதவியாளர். நான் போலீஸ் இல்லை, பணத்தை முடக்கவும் முடியாது. "
-              "இன்னும் பேங்க்கு அல்லது 1930-க்கு கால் பண்ணலைன்னா, உடனே பண்ணுங்க. "
-              "நான் OTP, PIN எதுவும் கேட்க மாட்டேன். என்ன நடந்தது என்று சொல்லுங்க.",
+        "ta": "வணக்கம், நான் {app}, ஒரு AI உதவியாளர். நான் போலீஸ் இல்லை, பணத்தை முடக்க முடியாது. "
+              "OTP, PIN கேட்க மாட்டேன். 1930-க்கும் கால் பண்ணுங்க. என்ன நடந்தது, சொல்லுங்க.",
         "en": "Hello, I am {app}, an AI assistant. I am not the police and I cannot freeze money. "
-              "If you have not called your bank or 1930 yet, please do it now. "
-              "I will never ask for an OTP or PIN. Tell me what happened.",
+              "I will never ask for an OTP or PIN. Please also call 1930. Tell me what happened.",
     },
+    "ASK_STORY": {"ta": "என்ன நடந்தது, சொல்லுங்க.", "en": "Tell me what happened."},
     "ASK_amount": {"ta": "எவ்வளவு பணம் போச்சு?", "en": "How much money was lost?"},
     "ASK_victim_bank": {"ta": "எந்த பேங்க் அக்கவுண்ட்ல இருந்து பணம் போச்சு?", "en": "Which bank was the money taken from?"},
     "ASK_payment_mode": {"ta": "பணம் எப்படி போச்சு? UPI-யா, கார்டா, நெட் பேங்கிங்கா?",
@@ -53,8 +52,8 @@ PROMPTS: dict[str, dict[str, str]] = {
                       "en": "I heard {n} digits. A UTR has 12. Please say it again, or paste the SMS."},
     "WRONG_LEN_phone": {"ta": "நான் {n} இலக்கம் கேட்டேன். மொபைல் நம்பர் பத்து இலக்கம். மறுபடி சொல்லுங்க.",
                         "en": "I heard {n} digits. A mobile number has 10. Please say it again."},
-    "CORRECT_CHUNK": {"ta": "சரியான இலக்கங்களை சொல்லுங்க, அல்லது கீபேட்ல டைப் பண்ணுங்க.",
-                      "en": "Please say the correct digits for this part, or type them on the keypad."},
+    "CORRECT_CHUNK": {"ta": "சரியான இலக்கங்களை, அல்லது முழு நம்பரையும் சொல்லுங்க, அல்லது டைப் பண்ணுங்க.",
+                      "en": "Please say the correct digits or the whole number, or type it."},
     "CONFIRM_HINT": {"ta": "சரி என்றால் 'ஆமா', தப்பு என்றால் 'இல்ல' சொல்லுங்க, அல்லது ✓ ✗ பட்டனை அழுத்துங்க.",
                      "en": "Say 'yes' if it is right or 'no' if it is wrong, or press ✓ or ✗."},
     "USE_NUMPAD": {"ta": "கீபேட்ல டைப் பண்ணுங்க.", "en": "Please type it on the keypad."},
@@ -98,16 +97,16 @@ PROMPTS: dict[str, dict[str, str]] = {
 
     # Phone calls have no screen. text() prefers PHONE_<id> over <id> on that channel.
     "PHONE_OPENING": {
-        "ta": "வணக்கம். இது சோதனை நிலையில் உள்ள டெலிபோன் சேவை. இது டெமோ, உண்மையான விவரங்களை சொல்ல வேண்டாம். "
-              "நான் {app}, ஒரு AI உதவியாளர். நான் போலீஸ் இல்லை, பணத்தை முடக்கவும் முடியாது. "
-              "இன்னும் பேங்க்கு அல்லது 1930-க்கு கால் பண்ணலைன்னா, உடனே பண்ணுங்க. "
-              "நான் OTP, PIN எதுவும் கேட்க மாட்டேன். "
-              "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு, மறுபடி கேட்க மூன்று, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க. "
-              "என்ன நடந்தது என்று சொல்லுங்க.",
-        "en": "Hello. This is an experimental telephone service and a demo, so do not give real details. "
-              "I am {app}, an AI assistant. I am not the police and I cannot freeze money. "
-              "If you have not called your bank or 1930 yet, please do it now. I will never ask for an OTP or PIN. "
-              "Press 1 for yes, 2 for no, 3 to repeat, and 0 for an officer. Tell me what happened.",
+        "ta": "வணக்கம். இது சோதனை டெமோ, உண்மையான விவரங்கள் வேண்டாம். நான் {app}, AI உதவியாளர். "
+              "போலீஸ் இல்லை, பணத்தை முடக்க முடியாது. OTP, PIN கேட்க மாட்டேன். "
+              "1930-க்கும் கால் பண்ணுங்க. என்ன நடந்தது, சொல்லுங்க.",
+        "en": "Hello. This is an experimental demo, so give no real details. I am {app}, an AI, not the police, "
+              "and I cannot freeze money. I will never ask for an OTP or PIN. "
+              "Please also call 1930. Tell me what happened.",
+    },
+    "PHONE_KEYS": {
+        "ta": "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு, மறுபடி கேட்க மூன்று, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க.",
+        "en": "Press 1 for yes, 2 for no, 3 to repeat, and 0 for an officer.",
     },
     "PHONE_ASK_utr": {
         "ta": "பேங்க் SMS-ல உள்ள பன்னிரண்டு இலக்க UTR நம்பரை சொல்லுங்க. அல்லது ஸ்டார் அழுத்தி டைப் பண்ணி, கடைசியில் ஹாஷ் அழுத்துங்க.",

@@ -68,6 +68,16 @@ def test_caller_page_starts_a_call_and_uses_a_mic_toggle(client):
     assert "pointerdown" not in page and "Hold to talk" not in page
 
 
+def test_back_undoes_an_answer_and_is_offered_only_when_possible(client):
+    j = client.post("/api/session", json={"lang": "en", "consent": True}).json()
+    sid = j["session_id"]
+    assert j["can_back"] is False
+    j = client.post(f"/api/session/{sid}/skip", json={"field": "amount"}).json()
+    assert j["can_back"] is True and j["state"] == "GAP_FILL"
+    j = client.post(f"/api/session/{sid}/back").json()
+    assert j["state"] == "NARRATIVE" and j["can_back"] is False and j["prompt"]["text"] == "Tell me what happened."
+
+
 def test_consent_required(client):
     assert client.post("/api/session", json={"lang": "en", "consent": False}).status_code == 400
 

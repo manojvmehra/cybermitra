@@ -114,6 +114,7 @@ class Session(BaseModel):
     operator_claimed: bool = False
     show_numpad: bool = False
     transcripts: list[str] = Field(default_factory=list)  # in-memory only, never logged raw
+    history: list[dict[str, Any]] = Field(default_factory=list)  # earlier steps for the Back button; memory only
 
     def elapsed_s(self) -> float:
         end = self.ended_at or time.time()
@@ -127,7 +128,7 @@ class Session(BaseModel):
 
 # ---------------------------------------------------------------- FSM events / actions
 class Event(BaseModel):
-    type: Literal["START", "AUDIO_TURN", "SMS_PASTED", "BUTTON", "NUMPAD", "SKIP", "TIMEOUT", "HUMAN",
+    type: Literal["START", "AUDIO_TURN", "SMS_PASTED", "BUTTON", "NUMPAD", "SKIP", "BACK", "TIMEOUT", "HUMAN",
                   "OPERATOR_TAKEOVER"]
     text: str = ""
     literal: str | None = None

@@ -433,7 +433,7 @@ def test_key_3_replays_what_was_just_said(client):
         tw.say()
         tw.played = 0
         tw.press("3")
-        assert tw.played == 400, "the last prompt again, not the whole call"
+        assert tw.played == 800, "the key help and question again, not the whole call"
         assert call_session().state == "READBACK", "repeating changes nothing"
         tw.hang_up()
 

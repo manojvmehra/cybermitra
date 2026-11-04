@@ -151,7 +151,7 @@ async def _respond(s: Session, acts: list[Action], transcript: str | None = None
         transcript=transcript, txns=view["txns"], fields=view["fields"], readback=rb, numpad=numpad,
         prompt=await _render_prompts(s, acts), handoff=s.handoff, packet_id=s.packet_id,
         summary=P.victim_summary(s, s.packet_id) if done else None,
-        elapsed_s=s.elapsed_s(), demo_banner=_banner(), error=error,
+        elapsed_s=s.elapsed_s(), demo_banner=_banner(), error=error, can_back=bool(s.history) and not done,
     )
 
 
@@ -228,6 +228,13 @@ async def numpad(sid: str, body: NumpadIn) -> TurnResponse:
 @router.post("/api/session/{sid}/skip")
 async def skip(sid: str, body: SkipIn) -> TurnResponse:
     s, acts = next_state(_get(sid), Event(type="SKIP", field=body.field, txn_index=body.txn_index))
+    return await _respond(s, acts)
+
+
+@router.post("/api/session/{sid}/back")
+async def back(sid: str) -> TurnResponse:
+    """Undo the last answer and ask that question again."""
+    s, acts = next_state(_get(sid), Event(type="BACK"))
     return await _respond(s, acts)
 
 

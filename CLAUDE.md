@@ -392,10 +392,11 @@ CONSENT → OPENING → NARRATIVE
    → NEXT_STEPS → QUEUED → END
 Any state → HANDOFF_HUMAN | HANDOFF_NONFIN | HANDOFF_WELLBEING | END
 ```
-- **OPENING** (first 15 s, always): who the AI is, "not police, cannot freeze money", "call 1930 / your bank now if you haven't", "I will never ask for OTP/PIN".
+- **OPENING** (under 15 s, always): who the AI is, "not police, cannot freeze money", "I will never ask for OTP/PIN", one short line to call 1930, then straight to "tell me what happened". The bank helpline comes in NEXT_STEPS.
 - **Escalation triggers → HANDOFF_HUMAN:** caller asks for a human; 2 failed repairs on the same field *and* the numpad declined; `SILENCE_HANDOFF_COUNT` empty transcripts; `MAX_TURNS_PER_CALL` reached; 3 consecutive `UNKNOWN` intents.
 - On any HANDOFF: build the packet with what exists, `status="needs_human"`, attach `handoff_reason` + masked transcript, push to the queue, emit SSE, and tell the caller "Connecting you to an officer (simulated in demo). Please also call 1930."
-- Transitions are pure: `next_state(session, event) -> (session, actions)`. Events: `AUDIO_TURN(stt)`, `SMS_PASTED(text)`, `BUTTON(field, txn, chunk, yes|no)`, `NUMPAD(field, txn, digits)`, `SKIP(field)`, `TIMEOUT`, `OPERATOR_TAKEOVER`.
+- Transitions are pure: `next_state(session, event) -> (session, actions)`. Events: `AUDIO_TURN(stt)`, `SMS_PASTED(text)`, `BUTTON(field, txn, chunk, yes|no)`, `NUMPAD(field, txn, digits)`, `SKIP(field)`, `BACK`, `TIMEOUT`, `OPERATOR_TAKEOVER`.
+- **BACK** undoes the last answer and asks that question again. It restores the fields from before that answer, so a value can only return to pending or empty, never become confirmed. Turn counts and the transcript stay. It is not available after the packet is pushed.
 - Actions: `SpeakPrompt`, `ShowReadback`, `UpdateFields`, `ShowSummary`, `PushPacket`.
 - 100% unit-testable with no network.
 
@@ -465,7 +466,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 - **Hang-up:** a caller who hangs up after saying anything still gets a `needs_human` packet with reason `caller_hung_up`.
 - **No screen on a phone:** the DTMF keypad replaces ✓/✗ and the numpad, and is authoritative like the buttons: **1 = yes, 2 = no, 3 = repeat, 0 = human**. To type a number, `*` starts entry on a numeric field and `#` submits; while a correction is being asked, keys are digits straight away. A key interrupts the AI. SMS paste is not available, so UTR and amount go through voice read-back or the keypad.
 - **Turns:** there is no push-to-talk, so an energy endpointer ends a turn after 1.2 s of quiet. The call is half duplex: the caller is heard only when the AI has finished speaking.
-- **Consent and honesty:** the opening is spoken and includes the "experimental" notice.
+- **Consent and honesty:** the opening is spoken and includes the "experimental" notice. The keys are explained right after the caller's story, so the opening stays short.
 - **Privacy:** every §1 rule applies. The caller's number (`From`) is masked in logs and is not stored in the packet unless the caller gives it as a field. Test calls still use fake details only.
 - **Label:** shown as "experimental telephony" in the demo, the operator UI and the README. Handoff remains a simulated transfer.
 - **Tests:** Twilio mocked, signature rejection, the µ-law ↔ 16 kHz round trip, one scripted call reaching the queue, and the routes absent when disabled.
@@ -485,6 +486,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 | POST | `/api/session/{id}/confirm` | `{field, txn_index, chunk_index, answer}` | `TurnResponse` |
 | POST | `/api/session/{id}/numpad` | `{field, txn_index, digits}` | `TurnResponse` |
 | POST | `/api/session/{id}/skip` | `{field, txn_index}` | `TurnResponse` |
+| POST | `/api/session/{id}/back` | — | `TurnResponse` (undoes the last answer) |
 | POST | `/api/session/{id}/human` | — | `TurnResponse` (forces HANDOFF_HUMAN) |
 | GET | `/api/session/{id}/summary` | — | Victim Summary |
 | DELETE | `/api/session/{id}` | — | 204 |
@@ -528,7 +530,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 - Always visible: a small **Call 1930** `tel:` text link fixed to the bottom of the screen, and the DEMO banner.
 - Consent, language (Tamil/English), then one main **Start Call** button, which creates the session and shows the mic.
 - Tap-to-talk toggle (`MediaRecorder`, hard stop at 25 s): one tap starts, the next stops and sends, with a pulsing dot and a timer while recording. Paste-SMS box. A "Talk to a person" button.
-- Live field panel per transaction. Read-back panel with large digits + ✓/✗; numpad on ✗ or low confidence.
+- Live field panel per transaction. Read-back panel with large digits + ✓/✗; numpad on ✗ or low confidence. The number box takes a whole number at once, typed or pasted, with or without spaces. A Back button returns to the previous step.
 - End screen: Victim Summary + next steps + Copy/Share. Auto-play `prompt.audio_url`.
 
 **`static/operator.html`** (laptop):

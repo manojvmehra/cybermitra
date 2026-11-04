@@ -48,7 +48,8 @@
   .yes { background:var(--ok); color:#fff; border-color:var(--ok); }
   .no { background:var(--red); color:#fff; border-color:var(--red); }
   #numpad { display:none; }
-  #numDisplay { font-size:28px; text-align:center; letter-spacing:4px; min-height:40px; padding:6px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; font-variant-numeric:tabular-nums; }
+  #numDisplay { font-size:26px; text-align:center; letter-spacing:2px; min-height:40px; padding:6px; font-variant-numeric:tabular-nums; }
+  #numCount { color:var(--muted); font-size:13px; text-align:center; min-height:1.3em; margin:4px 0 8px; }
   .pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
   .pad button { font-size:22px; padding:14px; }
   pre { white-space:pre-wrap; font:14px/1.5 ui-monospace, Consolas, monospace; background:var(--bg); padding:10px; border-radius:8px; border:1px solid var(--line); }
@@ -115,7 +116,8 @@
 
     <section id="numpad">
       <h2 id="npLabel">Type it / டைப் செய்யுங்கள்</h2>
-      <div id="numDisplay"></div>
+      <input id="numDisplay" type="text" inputmode="numeric" autocomplete="off" aria-label="Number">
+      <div id="numCount"></div>
       <div class="pad" id="pad"></div>
       <p class="row small" style="margin-top:8px"><button id="npCancel">Cancel</button><button id="npSend" class="primary">Done ✓</button></p>
     </section>
@@ -130,6 +132,7 @@
     <section id="talk">
       <button id="ptt"><span id="recDot" class="dot hidden"></span><span id="pttText">🎤 Tap to talk / தட்டிப் பேசுங்கள்</span></button>
       <p class="row small" style="margin-top:8px">
+        <button id="backBtn" class="hidden">← Back / பின்னால்</button>
         <button id="skipBtn">Skip / தவிர்</button>
         <button id="humanBtn">👤 Talk to a person</button>
       </p>
@@ -256,7 +259,7 @@
     if (["GAP_FILL", "READBACK"].includes(r.state) && cur && cur in TEXT_HINTS && !done) openType(cur, r.current_txn);
     else if (!reviewing) closeType();
     // end states
-    show("talk", !done); show("smsBox", !done);
+    show("talk", !done); show("smsBox", !done); show("backBtn", !!r.can_back && !done);
     if (r.handoff) {
       show("handoff", true);
       $("handoffText").textContent = r.prompt.text;
@@ -325,13 +328,23 @@
   $("pad").innerHTML = keys.map(k => `<button data-k="${k}">${k}</button>`).join("");
   $("pad").addEventListener("click", e => {
     const k = e.target.dataset.k; if (!k) return;
-    if (k === "⌫") numBuf = numBuf.slice(0, -1); else if (k === "C") numBuf = ""; else if (numBuf.length < 14) numBuf += k;
-    $("numDisplay").textContent = numBuf;
+    setNum(k === "⌫" ? numBuf.slice(0, -1) : k === "C" ? "" : numBuf + k);
   });
+  // Whole numbers go in at once, typed or pasted, with or without spaces: only the digits are kept.
+  const NUM_LENGTHS = { utr: 12, suspect_phone: 10, victim_mobile: 10 };
+  function setNum(v) {
+    numBuf = v.replace(/\D/g, "").slice(0, 14);
+    const box = $("numDisplay"), want = numpadTarget && NUM_LENGTHS[numpadTarget.field];
+    if (box.value !== numBuf) box.value = numBuf;
+    $("numCount").textContent = want ? `${numBuf.length} / ${want} digits` : "";
+  }
+  $("numDisplay").addEventListener("input", e => setNum(e.target.value));
+  $("numDisplay").addEventListener("keydown", e => { if (e.key === "Enter") $("npSend").click(); });
   function openNumpad(field, txn) {
     const key = field + "#" + (txn ?? "");
-    if (!numpadTarget || numpadTarget.key !== key) { numBuf = ""; $("numDisplay").textContent = ""; }
+    const same = numpadTarget && numpadTarget.key === key;
     numpadTarget = { field, txn_index: txn ?? null, key };
+    setNum(same ? numBuf : "");
     $("npLabel").textContent = "Type " + (ALL_LABELS[field] || field) + (txn !== null && txn !== undefined && last && last.txns.length > 1 ? ` (transaction ${txn + 1})` : "");
     $("numpad").style.display = "block";
   }
@@ -340,7 +353,7 @@
   $("npSend").addEventListener("click", async () => {
     if (!numpadTarget || !numBuf) return;
     const r = await api(`/api/session/${sid}/numpad`, { field: numpadTarget.field, txn_index: numpadTarget.txn_index, digits: numBuf });
-    numBuf = ""; $("numDisplay").textContent = "";
+    setNum("");
     if (r) { if (last && last.state === "REVIEW") closeNumpad(); render(r); }
   });
 
@@ -383,6 +396,11 @@
     else if (last.current_field) body = { field: last.current_field, txn_index: last.current_txn };
     if (!body) return;
     const r = await api(`/api/session/${sid}/skip`, body);
+    if (r) render(r);
+  });
+  $("backBtn").addEventListener("click", async () => {
+    setNum(""); $("typeInput").value = "";
+    const r = await api(`/api/session/${sid}/back`);
     if (r) render(r);
   });
   $("humanBtn").addEventListener("click", async () => { const r = await api(`/api/session/${sid}/human`, {}); if (r) render(r); });

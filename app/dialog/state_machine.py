@@ -45,6 +45,11 @@ TEXT_FIELDS = {"victim_bank", "suspect_bank", "payment_mode", "datetime", "victi
 YESNO_BUTTONS = {"more_txn", "review", "dup_utr", "called_bank"}
 UNKNOWN_HANDOFF = 3
 GAVE_UP_HANDOFF = 2
+MAX_BACK_STEPS = 30
+UNDOABLE = {"AUDIO_TURN", "SMS_PASTED", "BUTTON", "NUMPAD", "SKIP"}
+# Back undoes the caller's answers, never the call's limits or record: these survive a step back.
+KEPT_ON_BACK = {"history", "transcripts", "turns", "api_turns", "silence_count", "unknown_streak", "created_at",
+                "last_active", "last_prompt_text"}
 
 
 # ---------------------------------------------------------------- action helpers
@@ -683,6 +688,8 @@ def _narrative(s: Session, acts: list[Action], ev: Event) -> None:
     if s.fields["fraud_type"].value is None:
         _set(s.fields["fraud_type"], "OTHER", status="confirmed", source="rules")
     s.txn_cursor = 0
+    if s.channel == "phone":
+        _speak(s, acts, "KEYS")  # kept out of the opening so that stays short
     _advance(s, acts)
 
 
@@ -881,8 +888,64 @@ def _button(s: Session, acts: list[Action], ev: Event) -> None:
         _readback_no(s, acts)
 
 
+# ---------------------------------------------------------------- back
+def _position(s: Session) -> tuple[object, ...]:
+    """What the caller can see of the call. A re-asked question leaves it unchanged, so it is not a step."""
+    rb = s.readback
+    values = [(f.value, f.status) for t in s.txns for f in t.fields.values()]
+    values += [(f.value, f.status) for f in s.fields.values()]
+    return (s.state, s.phase, s.current_field, s.current_txn, (rb.index, rb.awaiting, rb.chunks) if rb else None, values)
+
+
+def _reask(s: Session, acts: list[Action]) -> None:
+    _update(s, acts)
+    if s.state == "NARRATIVE":
+        _speak(s, acts, "ASK_STORY")
+    elif s.state == "GAP_FILL" and s.current_field:
+        if s.show_numpad:
+            acts.append(Action(type="ShowNumpad", data={"field": s.current_field, "txn_index": s.current_txn}))
+        _ask_again(s, acts)
+    elif s.state == "READBACK" and s.readback:
+        rb = s.readback
+        _say_chunk(s, acts)
+        if rb.awaiting == "correct":
+            acts.append(Action(type="ShowNumpad", data={"field": rb.field, "txn_index": rb.txn_index,
+                                                        "chunk_index": rb.index}))
+            _speak(s, acts, "CORRECT_CHUNK")
+    elif s.state == "ASK_MORE_TXN":
+        _speak(s, acts, "ASK_MORE_TXN")
+    elif s.state == "DUP_CHECK":
+        _speak(s, acts, "DUP_UTR")
+    elif s.state == "REVIEW":
+        _review(s, acts)
+
+
+def _back(session: Session) -> tuple[Session, list[Action]]:
+    """Return to the step before the last answer. A value goes back to how it was then, so a confirmed
+    digit can only become unconfirmed or empty here, and the caller answers again."""
+    s = session.model_copy(deep=True)
+    acts: list[Action] = []
+    if s.state in TERMINAL or not s.history:  # a packet that has been pushed is the operator's now
+        return s, acts
+    snapshot = s.history[-1]
+    restored = Session.model_validate({**s.model_dump(include=KEPT_ON_BACK), **snapshot})
+    restored.history = s.history[:-1]
+    restored.last_active = time.time()
+    _reask(restored, acts)
+    return restored, acts
+
+
 # ---------------------------------------------------------------- entry point
 def next_state(session: Session, ev: Event) -> tuple[Session, list[Action]]:
+    if ev.type == "BACK":
+        return _back(session)
+    s, acts = _step(session, ev)
+    if ev.type in UNDOABLE and s.state not in TERMINAL and _position(s) != _position(session):
+        s.history = [*session.history, session.model_dump(exclude=KEPT_ON_BACK)][-MAX_BACK_STEPS:]
+    return s, acts
+
+
+def _step(session: Session, ev: Event) -> tuple[Session, list[Action]]:
     s = session.model_copy(deep=True)
     acts: list[Action] = []
     s.last_active = time.time()

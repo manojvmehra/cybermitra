@@ -606,3 +606,129 @@ def test_real_prisma_smoke_output():
     assert c["fraud_type"].value == "OTP_BANK_CALL"
     assert find_bank("எஸ் பை பேங்க்லிருந்து") == ("SBI", "எஸ் பை")
     assert find_bank("எஸ்பி ஆபீஸ்ல இருந்து") is None  # police SP, not a bank
+
+
+# ---------------------------------------------------------------- back
+def _at_utr() -> Dialog:
+    d = Dialog()
+    d.say(NARRATIVE, LITERAL)
+    d.until("utr")
+    return d
+
+
+def test_back_is_not_offered_before_the_first_answer():
+    d = Dialog()
+    assert d.s.history == []
+    d.send(Event(type="BACK"))
+    d.at("NARRATIVE")
+    assert d.acts == []
+
+
+def test_back_from_the_first_question_returns_to_the_story():
+    d = Dialog()
+    d.say("theriyala")
+    assert d.s.state != "NARRATIVE"
+    d.send(Event(type="BACK"))
+    d.at("NARRATIVE")
+    assert "Tell me what happened" in d.spoken and not d.s.txns
+
+
+def test_back_clears_a_typed_answer_so_it_can_be_entered_again():
+    d = _at_utr()
+    d.send(Event(type="NUMPAD", field="utr", digits="111122223333"))
+    assert d.s.txns[0].fields["utr"].status == "confirmed" and d.s.current_field != "utr"
+    d.send(Event(type="BACK"))
+    d.at("GAP_FILL", "utr")
+    f = d.s.txns[0].fields["utr"]
+    assert f.value is None and f.status == "empty" and "UTR" in d.spoken
+    d.send(Event(type="NUMPAD", field="utr", digits="444455556666"))
+    assert d.s.txns[0].fields["utr"].value == "444455556666"
+
+
+def test_back_steps_through_readback_chunks_and_never_confirms():
+    d = _at_utr()
+    d.say("4306 1982 7418")
+    d.at("READBACK", "utr")
+    d.button("yes")
+    assert d.s.readback.index == 1
+    d.send(Event(type="BACK"))
+    assert d.s.readback.index == 0 and d.s.txns[0].fields["utr"].status == "pending"
+    assert any(a.type == "ShowReadback" for a in d.acts)
+
+
+def test_back_keeps_the_call_limits_and_transcript():
+    d = _at_utr()
+    d.say("4306 1982 7418")
+    turns, said = d.s.turns, list(d.s.transcripts)
+    d.send(Event(type="BACK"))
+    assert d.s.turns == turns and d.s.transcripts == said
+
+
+def test_a_reasked_question_is_not_a_step():
+    d = _at_utr()
+    n = len(d.s.history)
+    d.say("idhu enna solla")
+    assert len(d.s.history) == n
+
+
+def test_back_can_undo_a_chain_of_answers():
+    d = Dialog()
+    d.say(NARRATIVE, LITERAL)
+    d.finish()
+    d.at("REVIEW")
+    while d.s.history:
+        d.send(Event(type="BACK"))
+    d.at("NARRATIVE")
+    assert not d.s.txns and d.s.fields["suspect_phone"].value is None
+
+
+def test_back_does_nothing_after_the_packet_is_pushed():
+    d = Dialog()
+    d.say(NARRATIVE, LITERAL)
+    d.finish()
+    d.yesno("review", "yes")
+    d.at("QUEUED")
+    d.send(Event(type="BACK"))
+    d.at("QUEUED")
+
+
+def test_back_history_is_bounded_and_has_no_nested_history():
+    d = Dialog()
+    d.say(NARRATIVE, LITERAL)
+    d.finish()
+    assert 0 < len(d.s.history) <= 30
+    assert all("history" not in h and "transcripts" not in h for h in d.s.history)
+
+
+# ---------------------------------------------------------------- whole UTR at once
+def test_utr_typed_whole_in_any_spacing():
+    for typed in ("430619827418", "4306 1982 7418", "4306-1982-7418"):
+        d = _at_utr()
+        d.send(Event(type="NUMPAD", field="utr", digits=typed))
+        assert d.s.txns[0].fields["utr"].value == "430619827418", typed
+
+
+def test_utr_spoken_whole_in_any_spacing():
+    for said in ("430619827418", "4306 1982 7418"):
+        d = _at_utr()
+        d.say(said)
+        d.at("READBACK", "utr")
+        assert d.s.txns[0].fields["utr"].value == "430619827418", said
+
+
+def test_whole_utr_typed_during_a_correction_replaces_the_number():
+    d = _at_utr()
+    d.say("430619827418")
+    d.button("no")
+    d.send(Event(type="NUMPAD", field="utr", digits="1111 2222 3333"))
+    assert d.s.txns[0].fields["utr"].value == "111122223333"
+
+
+def test_whole_utr_said_during_a_correction_replaces_the_number():
+    d = _at_utr()
+    d.say("430619827418")
+    d.button("no")
+    d.say("1111 2222 3333")
+    assert d.s.txns[0].fields["utr"].value == "111122223333"
+    d.at("READBACK", "utr")
+    assert d.s.txns[0].fields["utr"].status == "pending"
