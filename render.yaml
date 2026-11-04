@@ -20,3 +20,13 @@ services:
         value: Asmita
       - key: TTS_VOICE_EN
         value: Kaveri
+      - key: TWILIO_ENABLED        # experimental telephony; needs the four settings below
+        value: "false"
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: TWILIO_PUBLIC_URL     # https://<service>.onrender.com
+        sync: false

@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
 
 WORKDIR /app
 RUN pip install --no-cache-dir fastapi==0.115.6 "uvicorn[standard]==0.32.1" httpx==0.28.1 pydantic==2.10.4 \
-    pydantic-settings==2.7.0 python-multipart==0.0.20
+    pydantic-settings==2.7.0 python-multipart==0.0.20 numpy==2.4.6 twilio==9.12.0
 COPY --chown=app:app app ./app
 COPY --chown=app:app static ./static
 # the TTS cache of fixed prompts is the only thing written to disk (no user audio, no transcripts)
