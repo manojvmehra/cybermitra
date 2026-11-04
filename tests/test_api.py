@@ -61,6 +61,13 @@ def test_index(client):
     assert r.status_code == 200 and "Call 1930" in r.text and "tel:1930" in r.text
 
 
+def test_caller_page_starts_a_call_and_uses_a_mic_toggle(client):
+    page = client.get("/").text
+    assert 'id="startCall"' in page and "Tap to talk" in page
+    assert 'class="call" href="tel:1930">📞' not in page  # 1930 is a text link, not the main action
+    assert "pointerdown" not in page and "Hold to talk" not in page
+
+
 def test_consent_required(client):
     assert client.post("/api/session", json={"lang": "en", "consent": False}).status_code == 400
 
@@ -230,7 +237,7 @@ def test_operator_token_required(client, op):
 
 
 def test_operator_disabled_without_token(client, monkeypatch):
-    monkeypatch.delenv("OPERATOR_TOKEN", raising=False)
+    monkeypatch.setenv("OPERATOR_TOKEN", "")  # empty beats a value in .env
     assert client.get("/api/operator/queue", headers={"X-Operator-Token": ""}).status_code == 503
 
 

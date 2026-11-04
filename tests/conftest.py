@@ -13,6 +13,7 @@ os.environ["TWILIO_ENABLED"] = "false"
 os.environ["TWILIO_ACCOUNT_SID"] = "ACtest"
 os.environ["TWILIO_AUTH_TOKEN"] = "test-auth-token"
 os.environ["TWILIO_PUBLIC_URL"] = ""
+os.environ["OPERATOR_TOKEN"] = ""
 
 
 @pytest.fixture(autouse=True)

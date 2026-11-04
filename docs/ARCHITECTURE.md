@@ -6,7 +6,7 @@
 
 ```
 CALLER DEVICE (static/caller.html)                OPERATOR DEVICE (static/operator.html, X-Operator-Token)
-push-to-talk ≤25 s · SMS paste · ✓/✗ · numpad      handoffs · review queue · packet view · edit/approve/reject
+tap-to-talk ≤25 s · SMS paste · ✓/✗ · numpad      handoffs · review queue · packet view · edit/approve/reject
   │ multipart audio / JSON                           ▲ SSE /api/events (fetch stream, token in header)  │ JSON
   ▼                                                  │                                                  ▼
 FastAPI app/main.py ─ app/api/routes_caller.py ──────┴─ app/api/events.py ◄── app/api/routes_operator.py

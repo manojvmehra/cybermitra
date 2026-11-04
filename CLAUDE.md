@@ -96,7 +96,7 @@ You are building **CyberMitra TN**, an **AI-first voice intake agent for Tamil N
 ```
 CALLER DEVICE (phone browser)                    OPERATOR DEVICE (laptop browser)
 static/caller.html                               static/operator.html
-push-to-talk ≤25 s, SMS paste, ✓/✗, numpad       review queue, packet view, Approve/Edit/Reject,
+tap-to-talk ≤25 s, SMS paste, ✓/✗, numpad        review queue, packet view, Approve/Edit/Reject,
    │ multipart audio / JSON                      "Take call" for handoffs
    ▼                                                ▲ SSE /api/events  │ JSON
 FastAPI (app/main.py) ─────────────────────────────┘                  │
@@ -525,9 +525,9 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 ## 8. FRONTEND — KEEP IT SIMPLE (two files, vanilla JS, no build)
 
 **`static/caller.html`** (meant for a phone):
-- Always visible: a big red **Call 1930** `tel:` link and the DEMO banner.
-- Consent + Start (Tamil/English).
-- Push-to-talk (`MediaRecorder`, hard stop at 25 s). Paste-SMS box. A "Talk to a person" button.
+- Always visible: a small **Call 1930** `tel:` text link fixed to the bottom of the screen, and the DEMO banner.
+- Consent, language (Tamil/English), then one main **Start Call** button, which creates the session and shows the mic.
+- Tap-to-talk toggle (`MediaRecorder`, hard stop at 25 s): one tap starts, the next stops and sends, with a pulsing dot and a timer while recording. Paste-SMS box. A "Talk to a person" button.
 - Live field panel per transaction. Read-back panel with large digits + ✓/✗; numpad on ✗ or low confidence.
 - End screen: Victim Summary + next steps + Copy/Share. Auto-play `prompt.audio_url`.
 
