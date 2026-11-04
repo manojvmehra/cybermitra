@@ -94,6 +94,43 @@ PROMPTS: dict[str, dict[str, str]] = {
     "RATE_LIMITED": {"ta": "இப்போது சேவை பிஸியாக உள்ளது. நேரடியாக 1930-க்கு கால் பண்ணுங்க.",
                      "en": "The service is busy right now. Please call 1930 directly."},
     "TOO_LONG": {"ta": "கொஞ்சம் சுருக்கமா, 25 விநாடிக்குள் சொல்லுங்க.", "en": "Please keep it shorter, under 25 seconds."},
+
+    # Phone calls have no screen. text() prefers PHONE_<id> over <id> on that channel.
+    "PHONE_OPENING": {
+        "ta": "வணக்கம். இது சோதனை நிலையில் உள்ள டெலிபோன் சேவை. இது டெமோ, உண்மையான விவரங்களை சொல்ல வேண்டாம். "
+              "நான் {app}, ஒரு AI உதவியாளர். நான் போலீஸ் இல்லை, பணத்தை முடக்கவும் முடியாது. "
+              "இன்னும் பேங்க்கு அல்லது 1930-க்கு கால் பண்ணலைன்னா, உடனே பண்ணுங்க. "
+              "நான் OTP, PIN எதுவும் கேட்க மாட்டேன். "
+              "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு, மறுபடி கேட்க மூன்று, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க. "
+              "என்ன நடந்தது என்று சொல்லுங்க.",
+        "en": "Hello. This is an experimental telephone service and a demo, so do not give real details. "
+              "I am {app}, an AI assistant. I am not the police and I cannot freeze money. "
+              "If you have not called your bank or 1930 yet, please do it now. I will never ask for an OTP or PIN. "
+              "Press 1 for yes, 2 for no, 3 to repeat, and 0 for an officer. Tell me what happened.",
+    },
+    "PHONE_ASK_utr": {
+        "ta": "பேங்க் SMS-ல உள்ள பன்னிரண்டு இலக்க UTR நம்பரை சொல்லுங்க. அல்லது ஸ்டார் அழுத்தி டைப் பண்ணி, கடைசியில் ஹாஷ் அழுத்துங்க.",
+        "en": "Say the 12-digit UTR number from the bank SMS. Or press star, type it, then press hash.",
+    },
+    "PHONE_DIDNT_CATCH": {"ta": "மன்னிக்கவும், சரியா புரியல. மறுபடி சொல்லுங்க.",
+                          "en": "Sorry, I didn't catch that. Please say it again."},
+    "PHONE_SILENCE": {"ta": "எதுவும் கேட்கல. தயவு செய்து பேசுங்க.", "en": "I didn't hear anything. Please speak now."},
+    "PHONE_WRONG_LEN_utr": {"ta": "நான் {n} இலக்கம் கேட்டேன். UTR பன்னிரண்டு இலக்கம். மறுபடி சொல்லுங்க, அல்லது ஸ்டார் அழுத்தி டைப் பண்ணுங்க.",
+                            "en": "I heard {n} digits. A UTR has 12. Please say it again, or press star and type it."},
+    "PHONE_CORRECT_CHUNK": {"ta": "சரியான இலக்கங்களை சொல்லுங்க, அல்லது டைப் பண்ணி ஹாஷ் அழுத்துங்க.",
+                            "en": "Please say the correct digits for this part, or type them and press hash."},
+    "PHONE_CONFIRM_HINT": {"ta": "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு அழுத்துங்க.",
+                           "en": "Press 1 if it is right, or 2 if it is wrong."},
+    "PHONE_USE_NUMPAD": {"ta": "கீபேட்ல டைப் பண்ணி, கடைசியில் ஹாஷ் அழுத்துங்க.",
+                         "en": "Please type it on the keypad, then press hash."},
+    "PHONE_HIGH_AMOUNT": {"ta": "இது பத்து லட்சத்துக்கு மேல். தொகையை கவனமா கேட்டு சரிபாருங்க.",
+                          "en": "This is above ten lakh. Please listen carefully and check the amount."},
+    "PHONE_REVIEW_FIX": {"ta": "ஏதாவது தப்புன்னா, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க. அப்படியே அனுப்ப ஒன்று அழுத்துங்க.",
+                         "en": "If something is wrong, press 0 for an officer. To send it as it is, press 1."},
+    "PHONE_QUEUED": {"ta": "நன்றி. உங்க விவரங்கள் ஒரு அதிகாரியின் சரிபார்ப்புக்கு அனுப்பப்பட்டன.",
+                     "en": "Thank you. Your details are sent to an officer for review."},
+    "PHONE_REFERENCE": {"ta": "உங்க வரைவு குறிப்பு எண் {ref}. இது போலீஸ் எண் அல்ல.",
+                        "en": "Your draft reference is {ref}. This is not a police number."},
 }
 
 LABELS: dict[str, dict[str, str]] = {
@@ -128,7 +165,9 @@ def is_static_text(t: str, lang: str) -> bool:
     return t in _static_texts(lang, get_settings().APP_NAME)
 
 
-def text(prompt_id: str, lang: str, **kw: object) -> str:
+def text(prompt_id: str, lang: str, channel: str = "web", **kw: object) -> str:
+    if channel == "phone" and f"PHONE_{prompt_id}" in PROMPTS:
+        prompt_id = f"PHONE_{prompt_id}"
     return PROMPTS[prompt_id][lang].format(app=get_settings().APP_NAME, **kw)
 
 

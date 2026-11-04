@@ -85,6 +85,27 @@ any → HANDOFF_HUMAN | HANDOFF_NONFIN | HANDOFF_WELLBEING      (DUP_CHECK: a UT
   still cannot give a second field needs a person).
 - A spoken OTP, PIN, CVV or ID is dropped, never echoed, and the previous question is asked again.
 
+## Experimental telephony (off by default)
+
+`TWILIO_ENABLED=true` with an auth token mounts `app/api/routes_twilio.py`. Each phone call is one normal `Session`
+with `channel="phone"`; only the transport differs.
+
+```
+Twilio ─ POST /api/twilio/voice ─► signature check ─► TwiML <Connect><Stream> + one-time token
+       ─ WS /api/twilio/stream ──► app/twilio_bridge.py CallBridge
+            µ-law 8 kHz → Endpointer (cuts turns by energy) → 16 kHz WAV → routes_caller.process_wav → same FSM
+            keys 1 2 3 0 * # → BUTTON / NUMPAD / HUMAN events → same FSM
+            Timbre (container=mulaw, 8 kHz) ← spoken prompts          routes_caller.commit → same queue + SSE
+```
+
+- `routes_caller.commit` and `process_wav` are the shared turn steps, so the web and phone paths cannot drift apart.
+- The receive loop never waits: it feeds the endpointer and fills an inbox. One worker handles turns and keys in order.
+- `mark` events say when audio finished playing. Only then does the bridge listen, so the AI never hears itself.
+- `PHONE_<id>` prompts replace anything that mentions a screen. The opening says the service is experimental.
+- If TTS fails or the bridge hits a bug, the stream closes and the TwiML after `<Connect>` tells the caller to call 1930.
+- Audio stays in memory for one turn. Twilio records nothing because we never ask it to: no `<Record>`, no `<Gather>`.
+  `From` is used only as an HMAC key for rate limiting; it is not logged or stored.
+
 ## Review queue (`app/queue`)
 
 - Handoffs: wellbeing first, then FIFO. Review: items waiting > `QUEUE_MAX_WAIT_S` first (FIFO), then by the
@@ -109,7 +130,8 @@ any → HANDOFF_HUMAN | HANDOFF_NONFIN | HANDOFF_WELLBEING      (DUP_CHECK: a UT
 | Read-back audio (speaks the user's digits) | in-memory, random 256-bit token URL, `Cache-Control: no-store` | `EPHEMERAL_AUDIO_TTL_S` (10 min) |
 | Fixed prompt audio (no user data) | `.cache/tts/<sha256>.wav` | until deleted |
 | Bench / probe STT results (acted or TTS clips) | `.cache/stt/<sha256>.json` | until deleted |
-| Logs | stdout (+ `LOG_FILE`), JSON, every line through `mask()` | rotating 3 × 5 MB |
+| Logs | stdout (+ `LOG_FILE`), JSON, every line through `mask()`; ids and audio tokens cut to 8 characters | rotating 3 × 5 MB |
+| Phone audio | memory, one turn | one turn |
 
 Request path hardening is in `app/security.py` (body limit, headers, CSP hash, client IP) and `app/audio.py` (ffmpeg).
 `DEMO_MODE` shows a banner warning users not to enter real details.

@@ -50,7 +50,7 @@ GAVE_UP_HANDOFF = 2
 # ---------------------------------------------------------------- action helpers
 def _speak(s: Session, acts: list[Action], pid: str | None = None, text: str | None = None,
            speed: str = "prompt", **kw: object) -> None:
-    t = text if text is not None else prompts.text(pid or "", s.lang, **kw)
+    t = text if text is not None else prompts.text(pid or "", s.lang, s.channel, **kw)
     acts.append(Action(type="SpeakPrompt", prompt_id=pid if text is None and not kw else None, text=t,
                        speed=speed))  # type: ignore[arg-type]
     s.last_prompt_text = t
@@ -140,7 +140,7 @@ def _not_understood(s: Session, acts: list[Action]) -> bool:
 # ---------------------------------------------------------------- flow
 def _prefix(s: Session, field: str, txn: int | None) -> str:
     if field in TXN_FIELDS and txn is not None and (len(s.txns) > 1 or (s.expected_txn_count or 1) > 1):
-        return prompts.text("TXN_PREFIX", s.lang, n=txn + 1)
+        return prompts.text("TXN_PREFIX", s.lang, s.channel, n=txn + 1)
     return ""
 
 
@@ -152,7 +152,7 @@ def _ask(s: Session, acts: list[Action], field: str, txn: int | None) -> None:
     s.show_numpad = False
     pre = _prefix(s, field, txn)
     if pre:
-        _speak(s, acts, text=pre + prompts.text(f"ASK_{field}", s.lang))
+        _speak(s, acts, text=pre + prompts.text(f"ASK_{field}", s.lang, s.channel))
     else:
         _speak(s, acts, f"ASK_{field}")
 
@@ -161,7 +161,7 @@ def _ask_again(s: Session, acts: list[Action]) -> None:
     assert s.current_field is not None
     pre = _prefix(s, s.current_field, s.current_txn)
     if pre:
-        _speak(s, acts, text=pre + prompts.text(f"ASK_{s.current_field}", s.lang))
+        _speak(s, acts, text=pre + prompts.text(f"ASK_{s.current_field}", s.lang, s.channel))
     else:
         _speak(s, acts, f"ASK_{s.current_field}")
 
@@ -900,7 +900,7 @@ def next_state(session: Session, ev: Event) -> tuple[Session, list[Action]]:
         _speak(s, acts, "OPENING")
         return s, acts
     if ev.type in ("HUMAN", "OPERATOR_TAKEOVER"):
-        reason: HandoffReason = "max_turns" if ev.text == "max_turns" else "caller_request"
+        reason: HandoffReason = {"max_turns": "max_turns", "hangup": "caller_hung_up"}.get(ev.text, "caller_request")  # type: ignore[assignment]
         _handoff(s, acts, "HANDOFF_HUMAN", reason)
         if ev.type == "OPERATOR_TAKEOVER":
             s.operator_claimed = True

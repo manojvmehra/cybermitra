@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     LOG_FILE: str = ""  # e.g. logs/app.log; empty = stdout only
     FFMPEG_TIMEOUT_S: float = 15
 
+    # --- experimental telephony (CLAUDE.md §6.16). Routes are mounted only when enabled.
+    TWILIO_ENABLED: bool = False
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_PHONE_NUMBER: str = ""
+    TWILIO_PUBLIC_URL: str = ""  # e.g. https://abc.ngrok-free.app; empty = taken from the request headers
+    TWILIO_LANG: Literal["ta", "en"] = "ta"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -17,6 +17,12 @@ def test_mask_text():
     assert "1930" in mask("call 1930")  # short numbers are left alone
 
 
+def test_session_ids_and_audio_tokens_are_shortened():
+    sid, tok = "09e397892d0a44a58a5852095bbb6fa9", "3f95ce12072564350b9e4168dd853d1b" * 2
+    s = mask(f"POST /api/session/{sid}/turn GET /api/audio/{tok}.wav")
+    assert sid not in s and tok not in s and "09e39789…" in s and "3f95ce12…" in s
+
+
 def test_json_formatter_masks_extra_fields():
     rec = logging.LogRecord("x", logging.INFO, "", 0, "phone 9876543210", None, None)
     rec.extra_fields = {"transcript": "my number 9876543210"}  # type: ignore[attr-defined]

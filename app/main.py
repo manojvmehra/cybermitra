@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -45,6 +46,12 @@ def create_app() -> FastAPI:
                   redoc_url=None, openapi_url="/openapi.json" if s.ENABLE_DOCS else None)
     app.include_router(routes_caller.router)
     app.include_router(routes_operator.router)
+    if s.TWILIO_ENABLED and s.TWILIO_AUTH_TOKEN:
+        from app.api import routes_twilio  # imported here so the Twilio SDK loads only when telephony is on
+
+        app.include_router(routes_twilio.router)
+    elif s.TWILIO_ENABLED:  # never mount an unauthenticated phone webhook
+        logging.getLogger("api").warning("TWILIO_ENABLED is true but TWILIO_AUTH_TOKEN is empty: telephony is off")
     # outermost first: size limit runs before anything reads the body
     app.add_middleware(SecurityHeaders,
                        script_hashes=inline_script_hashes(STATIC / "caller.html", STATIC / "operator.html"))

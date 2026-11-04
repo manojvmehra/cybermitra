@@ -156,6 +156,7 @@
   function itemHTML(it, kind) {
     const chips = [];
     if (kind === "handoff") chips.push(`<span class="chip red">${esc(it.reason_label || it.handoff_reason)}</span>`);
+    if (it.channel_label) chips.push(`<span class="chip src">${esc(it.channel_label)}</span>`);
     if (it.status === "claimed") chips.push(`<span class="chip ok">claimed</span>`);
     if (it.has_verify) chips.push(`<span class="chip warn">⚠ verify</span>`);
     if (kind === "done") chips.push(`<span class="chip ${it.status === "approved" ? "ok" : "warn"}">${esc(it.status)}</span>`);
@@ -180,7 +181,7 @@
     $("live").innerHTML = ls.map(l => {
       const txns = (l.txns || []).map(t => `T${t.index + 1}: ${esc(t.amount.display)} · ${esc(t.datetime.display)} · ${esc(t.utr.display)}`).join("<br>");
       const f = l.fields || {};
-      return `<div class="item"><div class="top"><span>call ${esc(l.session)}</span><span class="muted">${esc(l.state)} · ${Math.round(l.elapsed_s)}s</span></div>
+      return `<div class="item"><div class="top"><span>call ${esc(l.session)}${l.channel === "phone" ? ' <span class="chip src">experimental telephony</span>' : ""}</span><span class="muted">${esc(l.state)} · ${Math.round(l.elapsed_s)}s</span></div>
         <div>${txns || '<span class="muted">listening…</span>'}</div>
         <div class="muted">${f.victim_bank ? esc(f.victim_bank.display) : ""} ${f.suspect_phone && f.suspect_phone.value ? "· suspect " + esc(f.suspect_phone.display) : ""}</div></div>`;
     }).join("") || '<div class="empty">No calls right now</div>';

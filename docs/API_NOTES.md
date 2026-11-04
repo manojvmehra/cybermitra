@@ -124,4 +124,21 @@ changelog entry since August is Prisma v3.0 (22 Oct 2026): opt-in, "no breaking 
 | 14 | "Timbre v2.0 is deprecated" | Only `timbre-v2.5` and `timbre-v3.0` are listed | Code uses `timbre-v2.5` |
 | 15 | — | New v3.0 context field `speaker_names` (1–4 names) | Not sent |
 
+## Telephony check (2026-11-04)
+
+Timbre with `audio_config` `{sample_rate: 8000, num_channels: 1, sample_width: 1, encoding: pcm_mulaw, container: mulaw}`
+returns raw µ-law with no file header. To prove the audio is real, a Tamil sentence went Timbre → µ-law → our 16 kHz
+conversion → Prisma v2.5 and came back almost word for word, with `ஐம்பதாயிரம் ரூபாய்` → `₹50,000`. One sentence, so a
+sanity check and not a benchmark.
+
+A local script then acted as Twilio against the running app with real Prisma and Timbre: signed webhook, forged
+signature refused (403), stream, one spoken turn, keys 1 and 0, handoff, packet in the queue. Reply latency was
+about 1.5 s after the turn ended. **Real Twilio has not been tested:** no real call, no real phone line, and the
+endpointer's thresholds have only seen synthetic audio.
+
+Twilio facts checked against its docs: `<Connect><Stream>` is bidirectional, its URL takes no query string (use
+`<Parameter>`), `dtmf` and `mark` work only on bidirectional streams, TwiML after `<Connect>` runs once our server
+closes the socket, and outbound audio must be base64 µ-law at 8 kHz with no header. Twilio recommends its SDK
+validator for signatures. Its pages do not say the stream handshake is signed, so we use a one-time token.
+
 Smoke run (2026-11-04, Timbre clip, fake numbers): STT 200 in 3047 ms, TTS 200 in 593 ms, response shape as documented.

@@ -34,7 +34,8 @@ def _item(p: Packet, pos: int, reason: str, now: float) -> dict:
             "reason_label": P.REASON_LABELS.get(p.handoff_reason or "", ""), "why_here": reason,
             "fraud_label": P.FRAUD_LABELS.get(p.fraud_type, p.fraud_type), "n_txns": len(p.txns),
             "waiting_s": round(now - p.created_at), "created_at": p.created_at,
-            "has_verify": any(r["verify"] for r in _rows(p)), "lang": p.lang}
+            "has_verify": any(r["verify"] for r in _rows(p)), "lang": p.lang,
+            "channel_label": P.CHANNEL_LABELS.get(p.channel, "")}
 
 
 def _rows(p: Packet) -> list[dict]:

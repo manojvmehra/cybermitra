@@ -13,7 +13,7 @@ An **AI-first voice intake agent for Tamil Nadu's 1930 cyber-fraud helpline over
    The operator reviews, edits if needed, and approves, instead of typing the complaint from scratch.
 5. A call goes to a person only when the caller asks, the AI cannot understand, or the case is non-financial
    or an emergency. The handoff is **warm**: the operator gets the masked transcript and everything captured
-   so far. In this demo the transfer is **simulated** (no telephony).
+   so far. In this demo the transfer is **simulated**.
 
 > It does **not** file on NCRP/CFCFRMS, contact banks or police, freeze or recover money, or auto-approve.
 > **Core rules:** a language model never decides a digit (code converts digits, a human confirms digits).
@@ -63,6 +63,20 @@ python scripts/probe_prisma_formats.py --clips 8
 ```bash
 python scripts/prerender_prompts.py
 ```
+
+## Experimental telephony (off by default)
+
+Call a real number and talk to the same agent. Calls go through the same FSM, queue and operator review, and appear
+as `experimental telephony`. It needs a Twilio number and a public HTTPS URL.
+
+1. Run `ngrok http 8080`.
+2. In `.env`, set `TWILIO_ENABLED=true`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_PUBLIC_URL=https://<your-ngrok-host>`, then start the server.
+3. In the Twilio console, under your number's voice settings, set "A call comes in" to Webhook, HTTP POST, `https://<your-ngrok-host>/api/twilio/voice`.
+4. Call the number. Keys: **1** yes, **2** no, **3** repeat, **0** officer, `*` to type a number, then `#` to finish.
+
+Limits: half duplex (you are heard only after the AI finishes speaking; a key interrupts it), turns end after 1.2 s of
+quiet, one language per server (`TWILIO_LANG`), no SMS paste, and no real transfer to a person. A free ngrok URL
+changes each run, which means updating `.env` and the Twilio console.
 
 ## Tests and quality
 
@@ -223,7 +237,7 @@ not as a post-read-back accuracy figure.
 ## Limitations (honest)
 
 - The corpus is small, acted by team members, and synthetic. Expect wide confidence intervals.
-- Telephone-band audio is simulated. The app uses a web mic, not a phone line.
+- Benchmark telephone-band audio is simulated, not a real phone line.
 - The Tamil number lexicon must be reviewed by a native speaker against what Prisma actually emits
   (see `app/nlp/lexicon_ta.py`). Prisma's spellings may differ from ours.
 - `confidence=high` means "the ITN and literal parses agree", not "correct". On v2.5 they are not independent,
@@ -234,7 +248,7 @@ not as a post-read-back accuracy figure.
 - The rule extractor's narrative attribution (which number is the suspect's) is best-effort. Gap-fill
   questions plus read-back are the safety net.
 - The handoff to a person is **simulated**: the operator sees the packet and transcript, but no phone call is
-  bridged. There is no telephony and no NCRP/CFCFRMS integration; "approve" changes a status in memory.
+  bridged. Telephony is experimental, off by default and not yet tested on a real call. There is no NCRP/CFCFRMS integration; "approve" changes a status in memory.
 - Containment and handling time come from a **simulation** (`bench/simulate_calls.py`: real transcripts, an
   oracle caller). They show the dialogue does not dead-end; they are not measurements on real callers.
 - Next-steps lines are tagged "draft guidance" until each has an official source in

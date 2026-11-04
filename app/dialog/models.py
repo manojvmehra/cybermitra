@@ -12,7 +12,8 @@ State = Literal["CONSENT", "OPENING", "NARRATIVE", "GAP_FILL", "READBACK", "ASK_
 Status = Literal["empty", "pending", "confirmed", "unconfirmed", "skipped"]
 PacketStatus = Literal["ready_for_review", "needs_human", "claimed", "approved", "rejected"]
 HandoffReason = Literal["caller_request", "silence", "max_turns", "not_understood", "repairs_exhausted",
-                        "non_financial", "wellbeing"]
+                        "non_financial", "wellbeing", "caller_hung_up"]
+Channel = Literal["web", "phone"]
 
 # Per-transaction fields, asked in this order inside the transaction loop.
 TXN_FIELDS = ["amount", "datetime", "utr"]
@@ -86,6 +87,7 @@ def _case_fields() -> dict[str, FieldState]:
 class Session(BaseModel):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     lang: Lang = "ta"
+    channel: Channel = "web"
     state: State = "CONSENT"
     phase: Literal["TXN", "CASE"] = "TXN"
     txns: list[Txn] = Field(default_factory=list)
@@ -160,6 +162,7 @@ class Packet(BaseModel):
     id: str  # CM-DRAFT-XXXX
     session_id: str
     lang: Lang
+    channel: Channel = "web"
     status: PacketStatus
     handoff_reason: HandoffReason | None = None
     fraud_type: str = "OTHER"

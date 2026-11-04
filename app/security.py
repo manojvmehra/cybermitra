@@ -13,7 +13,7 @@ from app.config import get_settings
 
 MAX_AUDIO_BODY = 7 * 1024 * 1024  # multipart audio upload, incl. form overhead
 MAX_JSON_BODY = 16 * 1024
-PRIVATE_PATHS = ("/api/session", "/api/operator", "/api/events")  # responses carry call data: never cached
+PRIVATE_PATHS = ("/api/session", "/api/operator", "/api/events", "/api/twilio")  # responses carry call data: never cached
 
 # Starlette spools uploads > 1 MB to a temp file on disk. Keep every allowed upload in memory instead:
 # the body limit below guarantees nothing larger ever reaches the parser.

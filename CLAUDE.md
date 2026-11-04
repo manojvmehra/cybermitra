@@ -250,6 +250,8 @@ TWILIO_ENABLED=false           # §6.16; routes are not mounted unless true
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_PHONE_NUMBER=
+TWILIO_PUBLIC_URL=             # e.g. https://abc.ngrok-free.app; empty = taken from the request headers
+TWILIO_LANG=ta                 # the language of phone calls
 ```
 
 ---
@@ -453,14 +455,16 @@ Every line needs an official source in `docs/NEXT_STEPS_SOURCES.md` before submi
 - Status transitions: `ready_for_review → approved | rejected`; `needs_human → claimed → approved | rejected`. An edit sets `source="operator"` on that field. Store `approval_latency_s` (opened → approved).
 - **Approve changes status only.** No network calls, no submission.
 
-### 6.16 Twilio telephony (EXPERIMENTAL, build after the benchmark)
+### 6.16 Twilio telephony (EXPERIMENTAL)
 
-Lets someone dial a real number and talk to the AI. **Build order:** only after Phases 1–3 (tests, benchmark) are done on the web interface. `TWILIO_ENABLED=false` by default. The app must work fully with it off, and `app/api/routes_twilio.py` is mounted in `main.py` only when it is true.
+Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by default. The app must work fully with it off, and `app/api/routes_twilio.py` is mounted in `main.py` only when it is true.
 
 - **Scope:** `app/twilio_bridge.py` converts between Twilio's 8 kHz µ-law and our 16 kHz pipeline: inbound µ-law → 16 kHz mono WAV for Prisma; Timbre audio → 8 kHz µ-law (`container: "mulaw"`, §2.3) for playback. **Everything else stays the same:** each phone call is one `Session`, with the same FSM, packet flow, queue and operator review.
 - **Transport:** Twilio Media Streams, so audio arrives live and stays in memory. Do **not** use `<Record>` (Twilio stores the recording, which breaks §1.3) or `<Gather input="speech">` (Twilio's recogniser replaces Prisma, which breaks the digit pipeline).
-- **Routes:** `POST /api/twilio/voice` answers with TwiML, and a WebSocket route carries the stream. Reject any webhook whose Twilio signature fails validation.
-- **No screen on a phone:** the DTMF keypad replaces ✓/✗ and the numpad, and is authoritative like the buttons. SMS paste is not available, so UTR and amount go through voice read-back.
+- **Routes:** `POST /api/twilio/voice` answers with TwiML, and the WebSocket `/api/twilio/stream` carries the stream. Reject any webhook whose Twilio signature fails validation (Twilio's SDK validator). Twilio's docs do not say the stream handshake is signed, so the signed webhook issues a one-time token, bound to the CallSid, which the stream must present before a session exists.
+- **Hang-up:** a caller who hangs up after saying anything still gets a `needs_human` packet with reason `caller_hung_up`.
+- **No screen on a phone:** the DTMF keypad replaces ✓/✗ and the numpad, and is authoritative like the buttons: **1 = yes, 2 = no, 3 = repeat, 0 = human**. To type a number, `*` starts entry on a numeric field and `#` submits; while a correction is being asked, keys are digits straight away. A key interrupts the AI. SMS paste is not available, so UTR and amount go through voice read-back or the keypad.
+- **Turns:** there is no push-to-talk, so an energy endpointer ends a turn after 1.2 s of quiet. The call is half duplex: the caller is heard only when the AI has finished speaking.
 - **Consent and honesty:** the opening is spoken and includes the "experimental" notice.
 - **Privacy:** every §1 rule applies. The caller's number (`From`) is masked in logs and is not stored in the packet unless the caller gives it as a field. Test calls still use fake details only.
 - **Label:** shown as "experimental telephony" in the demo, the operator UI and the README. Handoff remains a simulated transfer.
@@ -609,7 +613,7 @@ Lets someone dial a real number and talk to the AI. **Build order:** only after 
 
 **Cut, do not build:** browser automation of any portal, a portal replica, a database, login/OTP flows, evidence upload, non-financial intake, ranking by amount, cross-complaint suspect matching.
 
-**After the benchmark, before deploy:** experimental Twilio telephony (§6.16).
+**Built alongside the benchmark:** experimental Twilio telephony (§6.16).
 
 ---
 

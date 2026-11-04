@@ -215,9 +215,9 @@ def test_augment_seed_is_per_clip(tmp_path, monkeypatch):
 def test_phone_m4a_with_index_at_the_end_loads(tmp_path):
     """Phone recorders write the MP4 index last, which ffmpeg cannot read from a pipe."""
     wav, m4a = tmp_path / "a.wav", tmp_path / "a.m4a"
-    wav.write_bytes(tone_wav(0.5))
+    wav.write_bytes(tone_wav(20.0))
     subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(wav), "-c:a", "aac", str(m4a)], check=True)
-    assert len(augment.load_clip(m4a)) > 6000
+    assert len(augment.load_clip(m4a)) > 300000
 
 
 # ---------------------------------------------------------------- corpus check

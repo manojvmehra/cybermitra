@@ -10,6 +10,8 @@ import time
 _DIGIT_RUN = re.compile(r"(?<!\w)(?:\+?\d[\d ,\-]{4,}\d)(?!\w)")
 _VPA = re.compile(r"\b([\w.\-]{2,})@([a-zA-Z]{2,64})\b")
 _RUPEE = re.compile(r"(₹|Rs\.?|INR)\s?[\d,]+(?:\.\d+)?", re.IGNORECASE)
+# Session ids and audio tokens in request paths: each one opens that call's data, so logs keep a short prefix.
+_TOKEN = re.compile(r"\b[0-9a-f]{32,}\b")
 
 
 def mask_digits(d: str) -> str:
@@ -22,7 +24,7 @@ def mask_digits(d: str) -> str:
 
 
 def mask(text: object) -> str:
-    s = str(text)
+    s = _TOKEN.sub(lambda m: f"{m.group(0)[:8]}…", str(text))
     s = _RUPEE.sub(lambda m: f"{m.group(1)}•••", s)
 
     def _run(m: re.Match[str]) -> str:

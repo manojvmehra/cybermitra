@@ -36,7 +36,9 @@ REASON_LABELS = {
     "repairs_exhausted": "AI could not capture details",
     "non_financial": "non-financial case",
     "wellbeing": "WELLBEING — caller may be at risk",
+    "caller_hung_up": "caller hung up mid-call",
 }
+CHANNEL_LABELS = {"phone": "experimental telephony"}
 PART_OF_DAY = {9: "morning", 13: "afternoon", 18: "evening", 21: "night"}
 
 
@@ -57,7 +59,8 @@ def build(s: Session, status: str, reason: str | None = None, packet_id: str | N
     ft = s.fields["fraud_type"].value or "OTHER"
     end = s.ended_at or s.last_active
     return Packet(
-        id=packet_id or new_packet_id(), session_id=s.id, lang=s.lang, status=status,  # type: ignore[arg-type]
+        id=packet_id or new_packet_id(), session_id=s.id, lang=s.lang, channel=s.channel,
+        status=status,  # type: ignore[arg-type]
         handoff_reason=reason,  # type: ignore[arg-type]
         fraud_type=str(ft),
         txns=[{k: f.model_copy() for k, f in t.fields.items()} for t in s.txns
@@ -140,6 +143,7 @@ def render_text(p: Packet) -> str:
     lines = [
         f"DRAFT — {p.id} — not filed. {app} is not affiliated with MHA, I4C, NCRP or TN Police.",
         f"{'Status':<14}: {status}",
+        *([f"{'Channel':<14}: {CHANNEL_LABELS[p.channel]}"] if p.channel in CHANNEL_LABELS else []),
         f"{'Fraud type':<14}: {FRAUD_LABELS.get(p.fraud_type, p.fraud_type)}",
         f"{'Victim bank':<14}: {bank:<34} Payment mode: {display(f.get('payment_mode'))}",
         f"{'Called bank?':<14}: {display(f.get('called_bank'))}",

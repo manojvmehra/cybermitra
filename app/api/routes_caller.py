@@ -77,6 +77,7 @@ async def _render_prompts(s: Session, acts: list[Action]) -> PromptOut:
 def live_view(s: Session) -> dict:
     """Fields as the operator's live tile and the caller's panel show them."""
     return {
+        "channel": s.channel,
         "txns": [{"index": i, **{k: P.field_row(f) for k, f in t.fields.items()}} for i, t in enumerate(s.txns)],
         "fields": {k: P.field_row(f) for k, f in s.fields.items()},
     }
@@ -98,20 +99,52 @@ def _push_packets(s: Session, acts: list[Action]) -> None:
             bus.publish("queue_reordered", {"changes": [e.model_dump() for e in moved]})
 
 
-async def _respond(s: Session, acts: list[Action], transcript: str | None = None,
-                   error: str | None = None) -> TurnResponse:
+def commit(s: Session, acts: list[Action]) -> dict:
+    """Everything a finished turn does on any channel: queue a packet, keep the session, update the operator."""
     _push_packets(s, acts)
     SESSIONS[s.id] = s
+    view = live_view(s)
+    bus.publish("live_fields", {"session": s.id[:8], "state": s.state, "current_field": s.current_field,
+                                "current_txn": s.current_txn, "elapsed_s": s.elapsed_s(), **view})
+    log(logger, "turn", session=s.id[:8], state=s.state, field=s.current_field or "", n_actions=len(acts))
+    return view
+
+
+async def process_wav(s: Session, wav: bytes) -> tuple[Session, list[Action], str | None, str | None]:
+    """One spoken turn: STT, then the FSM. -> (session, actions, transcript, error). Audio is not kept."""
+    settings = get_settings()
+    if audio.duration_s(wav) > settings.MAX_CLIP_S:
+        return s, [Action(type="SpeakPrompt", text=prompts.text("TOO_LONG", s.lang, s.channel))], None, "too_long"
+    s = s.model_copy()
+    s.api_turns += 1  # every STT call counts toward the per-call cap, even silent clips
+    SESSIONS[s.id] = s
+    profile = stt.SttProfile.from_settings(s.lang)
+    try:
+        res = await stt.transcribe(wav, profile=profile, context=s.last_prompt_text or None,
+                                   request_id=f"{s.id}-{s.api_turns}", use_cache=settings.STT_CACHE_LIVE)
+    except GnaniError as e:
+        log(logger, "stt failed", code=e.code, status=e.status)
+        return s, [Action(type="SpeakPrompt", text=prompts.text("DIDNT_CATCH", s.lang, s.channel))], None, f"stt_{e.code}"
+    if res.truncated:
+        return s, [Action(type="SpeakPrompt", text=prompts.text("TOO_LONG", s.lang, s.channel))], None, "truncated"
+    candidates = None
+    if s.state == "NARRATIVE" and settings.EVON_MODE != "off":
+        cands = await extractor.extract_narrative(res)
+        candidates = {k: c.__dict__ for k, c in cands.items()}
+    ev = Event(type="AUDIO_TURN", text=res.text, literal=res.literal, candidates=candidates)
+    s, acts = next_state(s, ev)
+    return s, acts, s.transcripts[-1] if s.transcripts else res.text, None
+
+
+async def _respond(s: Session, acts: list[Action], transcript: str | None = None,
+                   error: str | None = None) -> TurnResponse:
+    view = commit(s, acts)
     rb = next((a.data for a in reversed(acts) if a.type == "ShowReadback"), None)
     if s.state != "READBACK":
         rb = None
     numpad = next((a.data for a in reversed(acts) if a.type == "ShowNumpad"), None)
     ask = ASK_STATES.get(s.state) or ("called_bank" if s.state == "GAP_FILL" and s.current_field == "called_bank"
                                       else None)
-    view = live_view(s)
-    bus.publish("live_fields", {"session": s.id[:8], "state": s.state, "current_field": s.current_field,
-                                "current_txn": s.current_txn, "elapsed_s": s.elapsed_s(), **view})
-    log(logger, "turn", session=s.id[:8], state=s.state, field=s.current_field or "", n_actions=len(acts))
     done = s.state == "QUEUED" or s.state.startswith("HANDOFF")
     return TurnResponse(
         session_id=s.id, state=s.state, current_field=s.current_field, current_txn=s.current_txn, ask=ask,
@@ -127,7 +160,7 @@ async def health() -> dict:
     s = get_settings()
     return {"ok": True, "gnani_key_present": bool(s.GNANI_API_KEY), "evon_mode": s.EVON_MODE,
             "ffmpeg": audio.ffmpeg_available(), "app_name": s.APP_NAME,
-            "operator_enabled": bool(s.OPERATOR_TOKEN)}
+            "operator_enabled": bool(s.OPERATOR_TOKEN), "telephony_enabled": s.TWILIO_ENABLED}
 
 
 @router.post("/api/session")
@@ -168,33 +201,8 @@ async def turn(sid: str, audio_file: UploadFile = File(..., alias="audio")) -> T
         s, acts = next_state(s, Event(type="AUDIO_TURN", text=""))
         return await _respond(s, acts, error="audio_decode")
     del raw  # audio lives in memory for this request only
-    if audio.duration_s(wav) > settings.MAX_CLIP_S:
-        acts = [Action(type="SpeakPrompt", text=prompts.text("TOO_LONG", s.lang))]
-        return await _respond(s, acts, error="too_long")
-
-    s = s.model_copy()
-    s.api_turns += 1  # every STT call counts toward the per-call cap, even silent clips
-    SESSIONS[s.id] = s
-    profile = stt.SttProfile.from_settings(s.lang)
-    try:
-        res = await stt.transcribe(wav, profile=profile, context=s.last_prompt_text or None,
-                                   request_id=f"{s.id}-{s.api_turns}", use_cache=settings.STT_CACHE_LIVE)
-    except GnaniError as e:
-        log(logger, "stt failed", code=e.code, status=e.status)
-        acts = [Action(type="SpeakPrompt", text=prompts.text("DIDNT_CATCH", s.lang))]
-        return await _respond(s, acts, error=f"stt_{e.code}")
-    if res.truncated:
-        acts = [Action(type="SpeakPrompt", text=prompts.text("TOO_LONG", s.lang))]
-        return await _respond(s, acts, error="truncated")
-
-    candidates = None
-    if s.state == "NARRATIVE" and settings.EVON_MODE != "off":
-        cands = await extractor.extract_narrative(res)
-        candidates = {k: c.__dict__ for k, c in cands.items()}
-    ev = Event(type="AUDIO_TURN", text=res.text, literal=res.literal, candidates=candidates)
-    s, acts = next_state(s, ev)
-    shown = s.transcripts[-1] if s.transcripts else res.text
-    return await _respond(s, acts, transcript=shown)
+    s, acts, transcript, error = await process_wav(s, wav)
+    return await _respond(s, acts, transcript=transcript, error=error)
 
 
 @router.post("/api/session/{sid}/sms")

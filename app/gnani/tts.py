@@ -16,10 +16,17 @@ def voice_for(lang: Lang) -> str:
     return s.TTS_VOICE_TA if lang == "ta-IN" else s.TTS_VOICE_EN
 
 
-def tts_key(text: str, lang: Lang, speed: float, voice: str | None = None) -> str:
+# 8 kHz µ-law with no file header, which is what a Twilio media stream plays
+TELEPHONY_AUDIO = {"sample_rate": 8000, "num_channels": 1, "sample_width": 1, "encoding": "pcm_mulaw",
+                   "container": "mulaw"}
+
+
+def tts_key(text: str, lang: Lang, speed: float, voice: str | None = None, telephony: bool = False) -> str:
     s = get_settings()
-    params = {"voice": voice or voice_for(lang), "model": s.TTS_MODEL, "lang": lang, "speed": speed,
-              "sr": s.TTS_SAMPLE_RATE}
+    params: dict[str, object] = {"voice": voice or voice_for(lang), "model": s.TTS_MODEL, "lang": lang,
+                                 "speed": speed, "sr": s.TTS_SAMPLE_RATE}
+    if telephony:
+        params |= {"sr": 8000, "container": "mulaw"}
     return cache.cache_key(text, params)
 
 
@@ -48,11 +55,11 @@ def get_ephemeral(token: str) -> bytes | None:
 
 
 async def synthesize(text: str, *, lang: Lang, speed: float, request_id: str | None = None,
-                     voice: str | None = None, persist: bool = True) -> tuple[bytes, str]:
-    """Returns (wav bytes, key). persist=True: disk cache keyed by content hash (static prompts).
+                     voice: str | None = None, persist: bool = True, telephony: bool = False) -> tuple[bytes, str]:
+    """Returns (audio bytes, key): WAV, or raw 8 kHz µ-law with telephony=True. persist=True: disk cache keyed by content hash (static prompts).
     persist=False: in-memory only, keyed by a random token (anything containing user data)."""
     s = get_settings()
-    key = tts_key(text, lang, speed, voice)
+    key = tts_key(text, lang, speed, voice, telephony)
     now = time.time()
     if persist:
         hit = cache.get_wav(key)
@@ -70,8 +77,9 @@ async def synthesize(text: str, *, lang: Lang, speed: float, request_id: str | N
         "model": s.TTS_MODEL,
         "language": lang,
         "speed": speed,
-        "audio_config": {"sample_rate": s.TTS_SAMPLE_RATE, "num_channels": 1, "sample_width": 2,
-                         "encoding": "linear_pcm", "container": "wav"},
+        "audio_config": TELEPHONY_AUDIO if telephony else {
+            "sample_rate": s.TTS_SAMPLE_RATE, "num_channels": 1, "sample_width": 2,
+            "encoding": "linear_pcm", "container": "wav"},
     }
     data, _ = await http.call("POST", "/api/v1/tts/inference", json=body, expect="bytes",
                               request_id=request_id, endpoint="tts")
