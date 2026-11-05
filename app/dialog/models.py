@@ -169,6 +169,7 @@ class Packet(BaseModel):
     fraud_type: str = "OTHER"
     txns: list[dict[str, FieldState]] = Field(default_factory=list)
     fields: dict[str, FieldState] = Field(default_factory=dict)
+    reported_txn_count: int = 0  # debits the caller mentioned, which can exceed the ones captured here
     transcript_masked: list[str] = Field(default_factory=list)  # handoffs only
     created_at: float = Field(default_factory=time.time)
     call_started_at: float = 0

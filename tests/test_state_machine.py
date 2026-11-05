@@ -140,7 +140,7 @@ def test_happy_path_one_transaction():
     d.say("yes")
     d.say("yes")
     d.at("REVIEW")
-    assert "1 transactions, total ₹50,000" in d.spoken
+    assert "Transactions: 1, total ₹50,000" in d.spoken
     d.say("yes")
     d.at("QUEUED")
     push = [a for a in d.acts if a.type == "PushPacket"]
@@ -183,7 +183,7 @@ def test_three_transactions_two_voice_one_sms():
     d.at("ASK_MORE_TXN")
     d.yesno("more_txn", "no")
     d.finish()
-    assert "3 transactions, total ₹55,000" in d.spoken
+    assert "Transactions: 3, total ₹55,000" in d.spoken
     text = d.packet()
     assert "Txn 3" in text and "₹55,000 (3 transactions)" in text and "[sms]" in text
 
@@ -584,8 +584,43 @@ def test_max_txns(monkeypatch):
     d = Dialog()
     d.sms(SMS_1)
     d.say("panam pochu")
-    assert "officer will add" in d.spoken
-    assert d.s.phase == "CASE" and len(d.s.txns) == 1
+    assert "officer will add" not in d.spoken  # nobody mentioned a second debit
+    assert d.s.state != "ASK_MORE_TXN" and d.s.phase == "CASE" and len(d.s.txns) == 1
+
+
+def test_default_is_a_single_transaction():
+    from app.config import Settings
+
+    assert Settings.model_fields["MAX_TXNS"].default == 1
+
+
+def test_single_txn_never_asks_for_another(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("MAX_TXNS", "1")
+    get_settings.cache_clear()
+    d = Dialog()
+    d.say("ennoda panam pochu")
+    d.send(Event(type="SKIP", field="amount", txn_index=0))
+    d.send(Event(type="SKIP", field="datetime", txn_index=0))
+    d.send(Event(type="SKIP", field="utr", txn_index=0))
+    assert d.s.state != "ASK_MORE_TXN" and d.s.phase == "CASE"
+    assert "other transaction" not in d.spoken
+
+
+def test_second_debit_over_the_cap_reaches_the_operator(monkeypatch):
+    from app.config import get_settings
+    from app.dialog import packet as P
+
+    monkeypatch.setenv("MAX_TXNS", "1")
+    get_settings.cache_clear()
+    d = Dialog()
+    d.sms(SMS_1 + "\n\n" + SMS_2)
+    d.say("panam pochu")
+    assert len(d.s.txns) == 1 and "officer will add" in d.spoken
+    p = P.build(d.s, "needs_human", "caller_request")
+    assert p.reported_txn_count == 2
+    assert "caller mentioned 2 transactions, 1 captured" in P.render_text(p)
 
 
 def test_real_prisma_smoke_output():

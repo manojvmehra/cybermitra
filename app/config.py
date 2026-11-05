@@ -33,8 +33,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "CyberMitra"
     SESSION_TTL_S: int = 1800
     PACKET_TTL_S: int = 86400
-    MAX_CLIP_S: float = 25
-    MAX_TXNS: int = 10
+    MAX_CLIP_S: float = 25  # largest piece sent to Prisma in one request (Prisma's own limit is 30 s)
+    MAX_TURN_S: float = 300  # safety cap on one spoken turn; longer turns are split into MAX_CLIP_S pieces
+    MAX_TXNS: int = 1
     MAX_TURNS_PER_CALL: int = 60
     SILENCE_HANDOFF_COUNT: int = 2
     QUEUE_MAX_WAIT_S: int = 300  # an item waiting longer than this jumps to the top (FIFO among overdue)

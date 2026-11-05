@@ -221,7 +221,8 @@ def _advance(s: Session, acts: list[Action]) -> None:
                 if _next_open(s, t.fields[name], name, i, acts):
                     return
         if len(s.txns) >= get_settings().MAX_TXNS:
-            _speak(s, acts, "MAX_TXNS")
+            if (s.expected_txn_count or 0) > len(s.txns):  # the caller mentioned more than we take on this call
+                _speak(s, acts, "MAX_TXNS")
             s.phase = "CASE"
         else:
             s.state = "ASK_MORE_TXN"
@@ -674,6 +675,8 @@ def _narrative(s: Session, acts: list[Action], ev: Event) -> None:
                      span=str(c.get("span_text", ""))[:80], precision=c.get("method") or None)
     if "expected_txn_count" in cands:
         s.expected_txn_count = int(cands["expected_txn_count"]["value"])
+    heard = len({c["value"] for c in amounts} | {k for k in known if k is not None})
+    s.expected_txn_count = max(s.expected_txn_count or 0, heard) or None
 
     for name, case_name in (("bank", "victim_bank"), ("suspect_phone", "suspect_phone"),
                             ("victim_mobile", "victim_mobile"), ("payment_mode", "payment_mode"),
@@ -707,7 +710,7 @@ def _sms_target(s: Session, amount: object) -> int | None:
 
 def _apply_sms(s: Session, acts: list[Action], text: str) -> None:
     parsed_all = parse_sms_multi(text)
-    added = 0
+    added = over_cap = 0
     for n, parsed in enumerate(parsed_all):
         for key, case_key in (("bank", "victim_bank"), ("suspect_upi", "suspect_upi"),
                               ("victim_account_last4", "victim_account_last4")):
@@ -736,7 +739,8 @@ def _apply_sms(s: Session, acts: list[Action], text: str) -> None:
         idx = _sms_target(s, amt) if n == 0 else None
         if idx is None:
             if len(s.txns) >= get_settings().MAX_TXNS:
-                break
+                over_cap += 1
+                continue
             s.txns.append(Txn())
             idx = len(s.txns) - 1
         for key, f in txn_parts.items():
@@ -744,6 +748,8 @@ def _apply_sms(s: Session, acts: list[Action], text: str) -> None:
             _set(s.txns[idx].fields[key], f.value, status="confirmed", source="sms", confidence="high",
                  span=f.raw_span[:40], precision=prec)
         added += 1
+    if over_cap:
+        s.expected_txn_count = max(s.expected_txn_count or 0, len(s.txns) + over_cap)
     _update(s, acts)
     if not parsed_all:
         _speak(s, acts, "DIDNT_CATCH")

@@ -14,6 +14,8 @@ os.environ["TWILIO_ACCOUNT_SID"] = "ACtest"
 os.environ["TWILIO_AUTH_TOKEN"] = "test-auth-token"
 os.environ["TWILIO_PUBLIC_URL"] = ""
 os.environ["OPERATOR_TOKEN"] = ""
+# The multi-transaction loop stays in the code and under test; the shipped default is 1.
+os.environ["MAX_TXNS"] = "10"
 
 
 @pytest.fixture(autouse=True)

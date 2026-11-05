@@ -1,133 +1,313 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Operator Review Queue</title>
+<title>Operator Dashboard</title>
+<script>try{const t=localStorage.getItem("cybermitra-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
 <style>
-  :root { --bg:#f6f6f3; --fg:#1b1b1b; --muted:#666; --card:#fff; --line:#ddd; --red:#c62828; --ok:#2e7d32; --warn:#b26a00; --accent:#1f4fa3; --hl:#fff4d6; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#121212; --fg:#eee; --muted:#aaa; --card:#1d1d1d; --line:#333; --accent:#7aa7ff; --hl:#3a3017; } }
+  /* Colours that do not change with the theme, and the channels used to build translucent ones */
+  :root { --r-card:16px; --r-btn:12px; --ease:.2s ease;
+    --purple:#7C3AED; --blue:#3B82F6; --brand:linear-gradient(135deg, var(--purple), var(--blue)); --on-brand:#FFFFFF;
+    --page-light:linear-gradient(180deg, #FFFFFF, #F5F5F7); --page-dark:radial-gradient(55% 40% at 50% 0%, rgba(var(--rgb-purple),.2), transparent 70%), linear-gradient(160deg, #0D0B1A, #1A1333);
+    --red:#EF4444; --red-hover:#DC2626; --ok:#22C55E; --ok-hover:#16A34A; --on-ok:#06240F; --toast-bg:rgba(127,29,29,.94);
+    --rgb-purple:124,58,237; --rgb-blue:59,130,246; --rgb-sky:96,165,250; --rgb-lilac:167,139,250; --rgb-indigo:99,102,241;
+    --rgb-green:34,197,94; --rgb-red:239,68,68; --rgb-amber:251,191,36; --rgb-pink:236,72,153; --rgb-rose:244,114,182; --rgb-black:0,0,0; }
+
+  /* Light theme */
+  :root { color-scheme:light; --dark-layer:0; --bg-a:#F5F5F7; --fg:#1A1A2E; --muted:#6B7280; --body:#374151; --faint:#6B7280; --placeholder:#9CA3AF;
+    --glass:#FFFFFF; --glass-hi:#F3F4F6; --line:#E5E7EB; --line-hi:rgba(var(--rgb-purple),.45); --item-bg:#FFFFFF; --subcard-bg:#FAFAFB; --input-bg:#F9FAFB;
+    --nav-bg:#FFFFFF; --dock-bg:#FFFFFF; --decide-bg:#FFFFFF;
+    --key-bg:#E5E7EB; --key-hover:#D1D5DB; --key-line:#D1D5DB; --key-fg:#1A1A2E; --key-label:#4B5563;
+    --msg-ai-bg:#EDE9FE; --msg-ai-line:#DDD6FE; --msg-ai-fg:#1A1A2E; --msg-you-bg:#DBEAFE; --msg-you-line:#BFDBFE; --msg-you-fg:#1A1A2E;
+    --msg-cur-bg:#EDE9FE; --msg-cur-fg:#1A1A2E; --msg-cur-line:var(--purple); --msg-cur-glow:0 0 0 3px rgba(var(--rgb-purple),.14);
+    --violet:#6D28D9; --wave:#7C3AED; --warn:#92400E; --alert:#B91C1C; --ok-text:#15803D; --chip-claimed:#1D4ED8; --chip-approved:#15803D; --chip-reason:#BE185D; --dot-off:#9CA3AF;
+    --hero-text:linear-gradient(90deg, #6D28D9, #2563EB); --off-filter:saturate(.55) opacity(.6); --decide-off:saturate(.45) opacity(.45);
+    --shadow:0 1px 3px rgba(var(--rgb-black),.06), 0 6px 16px rgba(var(--rgb-black),.05);
+    --glow:0 6px 20px rgba(var(--rgb-purple),.26); --glow-hi:0 8px 28px rgba(var(--rgb-indigo),.34); --pink:#DB2777; }
+  /* Dark theme */
+  [data-theme="dark"] { color-scheme:dark; --dark-layer:1; --bg-a:#0D0B1A; --bg-b:#1A1333; --fg:#FFFFFF; --muted:#A0A0B8; --body:#D9D9E6; --faint:#7B7B94; --placeholder:#7B7B94;
+    --glass:rgba(255,255,255,.055); --glass-hi:rgba(255,255,255,.1); --line:rgba(255,255,255,.1); --line-hi:rgba(var(--rgb-lilac),.55); --item-bg:rgba(255,255,255,.025); --subcard-bg:rgba(255,255,255,.03); --input-bg:rgba(var(--rgb-black),.28);
+    --nav-bg:rgba(13,11,26,.7); --dock-bg:rgba(13,11,26,.86); --decide-bg:rgba(22,17,44,.97);
+    --key-bg:var(--glass); --key-hover:var(--glass-hi); --key-line:var(--line); --key-fg:#FFFFFF; --key-label:#A0A0B8;
+    --msg-ai-bg:rgba(var(--rgb-purple),.24); --msg-ai-line:rgba(var(--rgb-lilac),.28); --msg-ai-fg:#EEE9FF; --msg-you-bg:rgba(var(--rgb-blue),.3); --msg-you-line:rgba(var(--rgb-sky),.35); --msg-you-fg:#FFFFFF;
+    --msg-cur-bg:rgba(var(--rgb-purple),.34); --msg-cur-fg:#FFFFFF; --msg-cur-line:#A78BFA; --msg-cur-glow:0 0 18px rgba(var(--rgb-purple),.38);
+    --violet:#A78BFA; --wave:#A78BFA; --warn:#FBBF24; --alert:#FCA5A5; --ok-text:#22C55E; --chip-claimed:#93C5FD; --chip-approved:#86EFAC; --chip-reason:#FBCFE8; --dot-off:#5B5B72;
+    --hero-text:linear-gradient(90deg, #C4B5FD, #93C5FD); --off-filter:saturate(.45) brightness(.72); --decide-off:saturate(.35) brightness(.5);
+    --shadow:0 8px 28px rgba(var(--rgb-black),.3);
+    --glow:none; --glow-hi:0 10px 36px rgba(var(--rgb-indigo),.5); --pink:#F472B6; }
+
+  /* Switching themes: a short-lived class, so the page's own 0.2s hover transitions are untouched the rest of the time */
+  @media (prefers-reduced-motion: no-preference) {
+    html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition:background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease !important; }
+  }
+  #themeToggle { flex:none; display:grid; place-items:center; width:32px; height:32px; min-height:0; padding:0; border-radius:10px; }
+  #themeToggle svg { width:17px; height:17px; }
+  [data-theme="dark"] .icon-moon, :root:not([data-theme="dark"]) .icon-sun { display:none; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, "Noto Sans Tamil", sans-serif; }
-  header { display:flex; align-items:center; gap:16px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:5; }
-  header h1 { font-size:17px; margin:0; }
-  .banner { background:#fff3cd; color:#5c4400; padding:6px 18px; font-size:13px; }
-  .metrics { display:flex; gap:18px; flex-wrap:wrap; margin-left:auto; font-size:13px; color:var(--muted); }
-  .metrics b { color:var(--fg); font-size:15px; font-variant-numeric:tabular-nums; }
-  .dot { width:9px; height:9px; border-radius:50%; background:var(--line); display:inline-block; }
-  .dot.on { background:var(--ok); }
-  main { display:grid; grid-template-columns: 340px 1fr; gap:14px; padding:14px 18px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:14px; }
-  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 8px; display:flex; justify-content:space-between; }
-  .item { border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; cursor:pointer; }
-  .item:hover, .item.sel { border-color:var(--accent); }
-  .item .top { display:flex; justify-content:space-between; gap:8px; font-weight:600; font-variant-numeric:tabular-nums; }
-  .item .why { color:var(--muted); font-size:12px; }
-  .handoffs .item { border-left:4px solid var(--red); }
-  .chip { font-size:11px; padding:1px 7px; border-radius:10px; border:1px solid var(--line); white-space:nowrap; }
-  .chip.red { color:#fff; background:var(--red); border-color:var(--red); }
-  .chip.warn { color:var(--warn); border-color:var(--warn); }
-  .chip.ok { color:var(--ok); border-color:var(--ok); }
-  .chip.src { color:var(--muted); }
-  button { font:inherit; border-radius:7px; border:1px solid var(--line); background:var(--card); color:var(--fg); padding:7px 12px; cursor:pointer; }
-  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-  button.approve { background:var(--ok); color:#fff; border-color:var(--ok); font-weight:700; padding:9px 18px; }
-  button.danger { color:var(--red); border-color:var(--red); }
-  button:disabled { opacity:.45; cursor:default; }
-  table { width:100%; border-collapse:collapse; }
-  td, th { text-align:left; padding:6px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
-  th { color:var(--muted); font-weight:500; width:150px; }
-  tr.verify td, tr.verify th { background:var(--hl); }
-  td.v { font-variant-numeric:tabular-nums; font-size:15px; }
-  .edit { font-size:12px; padding:2px 8px; float:right; }
-  pre { white-space:pre-wrap; font:12.5px/1.5 ui-monospace, Consolas, monospace; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; }
-  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
-  .muted { color:var(--muted); }
-  .empty { color:var(--muted); font-style:italic; padding:6px 0; }
-  .audit { max-height:220px; overflow:auto; font-size:12px; }
-  .audit div { padding:3px 0; border-bottom:1px dashed var(--line); }
-  .live .item { cursor:default; border-style:dashed; }
-  #login { max-width:420px; margin:80px auto; }
-  input[type=password], input[type=text] { font:inherit; padding:8px; border-radius:7px; border:1px solid var(--line); background:var(--bg); color:var(--fg); width:100%; }
+  html { background:var(--bg-a); }
+  body { margin:0; min-height:100vh; background:transparent; color:var(--body); font:14px/1.5 Inter, "Noto Sans Tamil", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  body::before { content:""; position:fixed; inset:0; z-index:-2; background:var(--page-light); }
+  body::after { content:""; position:fixed; inset:0; z-index:-1; opacity:var(--dark-layer); transition:opacity .3s ease; background:var(--page-dark); }
   .hidden { display:none !important; }
-  .transcript div { padding:3px 0; border-bottom:1px dashed var(--line); }
+  .muted { color:var(--muted); }
+  .empty { color:var(--muted); padding:6px 2px; font-size:13px; }
+
+  header { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; padding:10px 18px; background:var(--nav-bg); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border-bottom:1px solid var(--line); }
+  header h1 { font-size:17px; font-weight:700; letter-spacing:-.02em; margin:0; color:var(--fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .logo { flex:none; display:block; width:32px; height:32px; }
+  .nav-right { margin-left:auto; display:flex; align-items:center; gap:12px; flex:none; font-size:13px; color:var(--muted); }
+  .live-state { display:inline-flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--dot-off); display:inline-block; transition:background var(--ease), box-shadow var(--ease); }
+  .dot.on { background:var(--ok); box-shadow:0 0 8px var(--ok); }
+  .banner { padding:6px 18px; font-size:12.5px; text-align:center; color:var(--warn); }
+
+  button { font:inherit; font-weight:600; border-radius:var(--r-btn); border:1px solid var(--line); background:var(--glass); color:var(--fg); padding:8px 14px; min-height:38px; cursor:pointer; transition:background var(--ease), border-color var(--ease), box-shadow var(--ease), transform var(--ease), opacity var(--ease); }
+  button:hover { background:var(--glass-hi); border-color:var(--line-hi); }
+  button:active { transform:scale(.97); }
+  button:focus-visible, input:focus-visible, .item:focus-visible { outline:2px solid var(--violet); outline-offset:2px; }
+  button.primary { background:var(--brand); border-color:transparent; color:var(--on-brand); box-shadow:0 6px 20px rgba(var(--rgb-purple),.3); }
+  button.primary:hover { box-shadow:var(--glow-hi); }
+  button.approve { background:var(--ok); border-color:var(--ok); color:var(--on-ok); padding:10px 26px; box-shadow:0 6px 20px rgba(var(--rgb-green),.3); }
+  button.approve:hover { background:var(--ok-hover); box-shadow:0 8px 28px rgba(var(--rgb-green),.45); }
+  button.reject { background:var(--red); border-color:var(--red); color:var(--on-brand); padding:10px 26px; box-shadow:0 6px 20px rgba(var(--rgb-red),.28); }
+  button.reject:hover { background:var(--red-hover); box-shadow:0 8px 28px rgba(var(--rgb-red),.42); }
+  button:disabled { opacity:.42; cursor:default; box-shadow:none; }
+  .decide button:disabled { opacity:1; filter:var(--decide-off); }
+  input[type=password], input[type=text] { font:inherit; color:var(--fg); padding:9px 11px; border-radius:var(--r-btn); border:1px solid var(--line); background:var(--input-bg); width:100%; transition:border-color var(--ease), box-shadow var(--ease); }
+  input:focus { border-color:var(--line-hi); box-shadow:0 0 0 3px rgba(var(--rgb-purple),.2); outline:none; }
+  ::placeholder { color:var(--placeholder); }
+
+  .card { background:var(--glass); border:1px solid var(--line); border-radius:var(--r-card); padding:14px; box-shadow:var(--shadow); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); animation:rise .26s ease both; }
+  h2 { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 10px; display:flex; justify-content:space-between; gap:8px; }
+  h3 { font-size:13px; font-weight:600; color:var(--fg); margin:12px 0 2px; }
+
+  #login { max-width:420px; margin:9vh auto 0; }
+  #login h2 { font-size:18px; text-transform:none; letter-spacing:-.01em; color:var(--fg); }
+  .login-row { display:flex; align-items:center; gap:10px; }
+
+  .shell { display:grid; grid-template-columns:300px minmax(0, 1fr) 280px; gap:14px; align-items:start; padding:12px 18px 24px; }
+  .side { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .center { display:flex; flex-direction:column; gap:12px; min-width:0; }
+
+  .item { border:1px solid var(--line); border-radius:12px; padding:9px 11px; margin-bottom:8px; cursor:pointer; background:var(--item-bg); transition:border-color var(--ease), background var(--ease), box-shadow var(--ease), transform var(--ease); }
+  .item:last-child { margin-bottom:0; }
+  .item:hover { border-color:var(--line-hi); background:var(--glass); transform:translateY(-1px); }
+  .item.sel { border-color:var(--violet); background:rgba(var(--rgb-purple),.16); box-shadow:0 0 18px rgba(var(--rgb-purple),.25); }
+  .item .top { display:flex; justify-content:space-between; gap:8px; font-weight:600; color:var(--fg); font-variant-numeric:tabular-nums; }
+  .item .why { color:var(--muted); font-size:12px; }
+  .item .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .handoffs .item { border-left:3px solid var(--pink); }
+  .live .item { cursor:default; border-style:dashed; transform:none; }
+
+  .chip { display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:999px; border:1px solid var(--line); white-space:nowrap; }
+  .chip.pending { color:var(--warn); background:rgba(var(--rgb-amber),.12); border-color:rgba(var(--rgb-amber),.45); }
+  .chip.claimed { color:var(--chip-claimed); background:rgba(var(--rgb-blue),.16); border-color:rgba(var(--rgb-sky),.5); }
+  .chip.approved { color:var(--chip-approved); background:rgba(var(--rgb-green),.14); border-color:rgba(var(--rgb-green),.5); }
+  .chip.rejected { color:var(--alert); background:rgba(var(--rgb-red),.15); border-color:rgba(var(--rgb-red),.55); }
+  .chip.reason { color:var(--chip-reason); background:rgba(var(--rgb-rose),.15); border-color:rgba(var(--rgb-rose),.5); }
+  .chip.warn { color:var(--warn); border-color:rgba(var(--rgb-amber),.5); }
+  .chip.ok { color:var(--chip-approved); border-color:rgba(var(--rgb-green),.45); }
+  .chip.src { color:var(--muted); }
+
+  #metrics { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+  .stat { background:var(--glass); border:1px solid var(--line); border-radius:var(--r-card); padding:10px 14px; -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); }
+  .stat b { display:block; font-size:21px; font-weight:700; color:var(--fg); letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .stat span { font-size:12px; color:var(--muted); }
+
+  #packetEmpty { text-align:center; padding:48px 12px; }
+  #packetLoading { display:none; justify-content:center; padding:48px 12px; }
+  #packetLoading.on { display:flex; }
+  .p-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .p-head h2 { margin:0; font-size:17px; font-weight:700; color:var(--fg); text-transform:none; letter-spacing:-.01em; }
+  #pReason p { margin:0 0 10px; }
+  .notice { margin:0 0 10px; padding:9px 12px; border-radius:var(--r-btn); color:var(--warn); background:rgba(var(--rgb-amber),.1); border:1px solid rgba(var(--rgb-amber),.4); }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+  .spacer { flex:1; }
+  #pGrid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+  #pGrid .full { grid-column:1 / -1; }
+  .pcard { padding:12px 14px; border:1px solid var(--line); border-radius:var(--r-card); background:var(--subcard-bg); min-width:0; }
+  .pcard h2 { margin-bottom:6px; }
+  .fld { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:0 8px; align-items:center; padding:7px 6px; border-bottom:1px solid var(--line); transition:background var(--ease); }
+  .fld:last-child { border-bottom:0; }
+  .fld .lbl { grid-column:1; font-size:12px; color:var(--muted); }
+  .fld .val { grid-column:1; color:var(--fg); font-size:15px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .fld .val .chip { margin-left:3px; }
+  .fld.verify { background:rgba(var(--rgb-amber),.13); border-radius:9px; }
+  .fld.editing .val { grid-column:1 / -1; }
+  button.edit { grid-column:2; grid-row:1 / span 2; min-height:32px; width:32px; padding:0; display:grid; place-items:center; color:var(--muted); background:none; border-color:transparent; }
+  button.edit:hover { color:var(--violet); background:var(--glass); border-color:var(--line); }
+  button.edit svg { width:15px; height:15px; }
+  .inline { display:flex; gap:6px; margin-top:3px; }
+  .inline input { flex:1; min-width:0; padding:6px 9px; }
+  .inline button { min-height:34px; padding:4px 11px; font-size:13px; flex:none; }
+  .total { display:flex; justify-content:space-between; gap:8px; padding:8px 6px 2px; color:var(--fg); font-weight:700; }
+  #askBar { margin:12px 0 0; padding:10px 12px; border:1px solid var(--line-hi); border-radius:var(--r-btn); background:rgba(var(--rgb-purple),.1); animation:rise .2s ease both; }
+  #askBar label { display:block; font-size:13px; font-weight:600; color:var(--fg); margin-bottom:4px; }
+  .decide { position:sticky; bottom:0; display:flex; justify-content:flex-end; gap:10px; margin:14px -14px -14px; padding:12px 14px; border-top:1px solid var(--line); border-radius:0 0 var(--r-card) var(--r-card); background:var(--decide-bg); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+  .decide .reject, .decide .approve { flex:0 1 180px; }
+  pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font:12.5px/1.55 ui-monospace, Consolas, monospace; color:var(--body); background:var(--input-bg); border:1px solid var(--line); border-radius:var(--r-btn); padding:12px; }
+  .transcript div { padding:4px 0; border-bottom:1px solid var(--line); }
+  .transcript div:last-child { border-bottom:0; }
+
+  .tl { position:relative; max-height:calc(100vh - 130px); overflow:auto; font-size:12.5px; padding-left:3px; }
+  .tl .ev { position:relative; padding:0 0 12px 18px; border-left:1px solid var(--line); margin-left:4px; }
+  .tl .ev:last-child { border-left-color:transparent; padding-bottom:0; }
+  .tl .ev::before { content:""; position:absolute; left:-5px; top:5px; width:9px; height:9px; border-radius:50%; background:var(--brand); box-shadow:0 0 8px rgba(var(--rgb-purple),.7); }
+  .tl b { color:var(--fg); }
+  .tl .when { display:block; font-size:11.5px; color:var(--muted); }
+
+  .spinner { display:inline-block; flex:none; width:22px; height:22px; border-radius:50%; background:conic-gradient(from 0deg, transparent 15%, var(--purple), var(--blue)); -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 2.5px)); mask:radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 2.5px)); animation:spin .8s linear infinite; }
+  #toast { position:fixed; left:50%; bottom:20px; z-index:9; transform:translateX(-50%); max-width:min(92vw, 520px); padding:10px 16px; border-radius:var(--r-btn); color:var(--on-brand); background:var(--toast-bg); border:1px solid rgba(var(--rgb-red),.6); box-shadow:var(--shadow); animation:rise .2s ease both; }
+
+  @media (min-width: 901px) {
+    .side { position:sticky; top:62px; max-height:calc(100vh - 74px); overflow:auto; overscroll-behavior:contain; padding-right:2px; }
+  }
+  @media (max-width: 1240px) {
+    .shell { grid-template-columns:290px minmax(0, 1fr); }
+    #auditSide { grid-column:2; position:static; max-height:none; }
+    .tl { max-height:300px; }
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns:minmax(0, 1fr); padding:10px 12px 20px; }
+    #auditSide { grid-column:1; }
+    #metrics { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    #pGrid { grid-template-columns:minmax(0, 1fr); }
+    header h1 { font-size:14.5px; line-height:1.2; white-space:normal; }
+  }
+
+  @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition:none !important; }
+    .spinner { border:3px solid var(--violet); border-right-color:transparent; background:none; -webkit-mask:none; mask:none; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1 id="title">Operator Review Queue</h1>
-  <span title="live updates"><span id="dot" class="dot"></span></span>
-  <div class="metrics" id="metrics"></div>
+  <svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="logoGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#7C3AED"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs><path d="M5.5 16v-2.5a10.5 10.5 0 0121 0V16" stroke="url(#logoGradient)" stroke-width="2.6" stroke-linecap="round"/><rect x="2.5" y="15" width="5.5" height="9.5" rx="2.75" fill="url(#logoGradient)"/><rect x="24" y="15" width="5.5" height="9.5" rx="2.75" fill="url(#logoGradient)"/><path d="M12.5 11.5h7a3 3 0 013 3v4.5a3 3 0 01-3 3h-4.2l-3.3 3v-3a3 3 0 01-2.5-3v-4.5a3 3 0 013-3z" fill="url(#logoGradient)"/><g fill="#fff"><circle cx="12.6" cy="16.75" r="1.15"/><circle cx="16" cy="16.75" r="1.15"/><circle cx="19.4" cy="16.75" r="1.15"/></g></svg>
+  <h1 id="title">CyberMitra Operator Dashboard</h1>
+  <div class="nav-right">
+    <span id="liveState" class="live-state hidden" title="live updates"><span id="dot" class="dot"></span> Live</span>
+    <button id="themeToggle" type="button" aria-label="Switch theme"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 019.8 3.5a8.5 8.5 0 1010.7 10.7z"/></svg></button>
+    <button id="logoutBtn" class="hidden">Log out</button>
+  </div>
 </header>
 <div class="banner">Demo — synthetic data only. Packets are DRAFTS: approving changes their status here and submits nothing anywhere. Transfers are simulated.</div>
 
-<section id="login">
+<section id="login" class="card">
   <h2>Operator sign-in</h2>
   <p class="muted">Enter the operator token (OPERATOR_TOKEN). It is kept in this tab's memory only.</p>
-  <p><input id="token" type="password" autocomplete="off"></p>
-  <p><button id="go" class="primary">Open queue</button> <span id="loginErr" class="muted"></span></p>
+  <p><input id="token" type="password" autocomplete="off" aria-label="Operator token"></p>
+  <div class="login-row"><button id="go" class="primary">Open queue</button> <span id="loginSpin" class="spinner hidden" aria-hidden="true"></span> <span id="loginErr" class="muted"></span></div>
 </section>
 
-<main id="app" class="hidden">
-  <div>
-    <section class="handoffs">
+<main id="app" class="shell hidden">
+  <aside class="side">
+    <section class="card handoffs">
       <h2>Handoffs <span id="nHand"></span></h2>
       <div id="handoffs"></div>
     </section>
-    <section>
+    <section class="card">
       <h2>Review queue <span id="nRev"></span></h2>
       <div id="review"></div>
     </section>
-    <section class="live">
+    <section class="card live">
       <h2>Calls in progress (AI) <span id="nLive"></span></h2>
       <div id="live"></div>
     </section>
-    <section>
+    <section class="card">
       <h2>Recently decided</h2>
       <div id="done"></div>
     </section>
-    <section>
-      <h2>Queue audit log</h2>
-      <div id="audit" class="audit"></div>
-    </section>
-  </div>
-  <div>
-    <section id="packetBox">
-      <div id="packetEmpty" class="empty">Select a packet from the queue.</div>
+  </aside>
+
+  <div class="center">
+    <div id="metrics"></div>
+    <section id="packetBox" class="card">
+      <div id="packetEmpty" class="muted">Select a packet from the queue.</div>
+      <div id="packetLoading"><span class="spinner" aria-label="Loading"></span></div>
       <div id="packet" class="hidden">
-        <h2><span id="pTitle"></span> <span id="pStatus"></span></h2>
+        <div class="p-head"><h2 id="pTitle"></h2> <span id="pStatus"></span></div>
         <div id="pReason"></div>
+        <div id="pNotice"></div>
         <div class="actions">
           <button id="claimBtn" class="primary">Take call</button>
-          <button id="approveBtn" class="approve">Approve</button>
-          <button id="rejectBtn" class="danger">Reject</button>
           <button id="addTxnBtn">+ Transaction</button>
-          <span style="flex:1"></span>
+          <span class="spacer"></span>
           <button id="copyBtn">Copy text</button>
           <button id="jsonBtn">Download JSON</button>
         </div>
-        <table id="pFields"></table>
+        <div id="pGrid"></div>
         <div id="transcriptBox" class="hidden">
           <h2 style="margin-top:14px">Call transcript (masked)</h2>
           <div id="transcript" class="transcript"></div>
         </div>
         <h2 style="margin-top:14px">Complaint packet (text)</h2>
         <pre id="pText"></pre>
+        <form id="askBar" class="hidden">
+          <label for="askInput" id="askLabel"></label>
+          <div class="inline">
+            <input id="askInput" type="text" autocomplete="off">
+            <button type="submit" class="primary" id="askOk">Confirm</button>
+            <button type="button" id="askCancel">Cancel</button>
+          </div>
+        </form>
+        <div class="decide">
+          <button id="rejectBtn" class="reject">Reject</button>
+          <button id="approveBtn" class="approve">Approve</button>
+        </div>
       </div>
     </section>
   </div>
+
+  <aside class="side" id="auditSide">
+    <section class="card">
+      <h2>Audit log</h2>
+      <div id="audit" class="tl"></div>
+    </section>
+  </aside>
 </main>
+<div id="toast" class="hidden" role="alert"></div>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  // --- theme: applied before first paint by the script in <head>; the choice is a per-viewer convenience
+  const html = document.documentElement, THEME_KEY = "cybermitra-theme";
+  function labelTheme() {
+    const label = `Switch to ${html.dataset.theme === "dark" ? "light" : "dark"} theme`;
+    $("themeToggle").setAttribute("aria-label", label); $("themeToggle").title = label;
+  }
+  let themeTimer = null;
+  $("themeToggle").addEventListener("click", () => {
+    html.classList.add("theme-switching");
+    html.dataset.theme = html.dataset.theme === "dark" ? "light" : "dark";
+    labelTheme();
+    try { localStorage.setItem(THEME_KEY, html.dataset.theme); } catch (e) {}
+    clearTimeout(themeTimer);
+    themeTimer = setTimeout(() => html.classList.remove("theme-switching"), 350);
+  });
+  labelTheme();
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
   const TXN = [["amount", "Amount"], ["datetime", "Date / time"], ["utr", "UTR / RRN"]];
-  const CASE = [["victim_bank", "Victim bank"], ["victim_account_last4", "A/c last 4"], ["payment_mode", "Payment mode"],
-    ["called_bank", "Called bank?"], ["suspect_phone", "Suspect phone"], ["suspect_upi", "Suspect UPI"],
-    ["suspect_bank", "Suspect bank"], ["district", "District"], ["victim_name", "Victim name"], ["victim_mobile", "Victim mobile"]];
+  const VICTIM = [["victim_name", "Victim name"], ["victim_mobile", "Victim mobile"], ["district", "District"],
+    ["victim_bank", "Victim bank"], ["victim_account_last4", "A/c last 4"], ["called_bank", "Called bank?"]];
+  const SUSPECT = [["suspect_phone", "Suspect phone"], ["suspect_upi", "Suspect UPI"], ["suspect_bank", "Suspect bank"]];
+  const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
   let token = "", current = null, selected = null, refreshTimer = null, liveSessions = {};
+  let editing = null, askMode = null, stream = null, toastTimer = null;
+  const inputOpen = () => !!(editing || askMode);  // a live refresh must not wipe what the operator is typing
+
+  fetch("/health").then(r => r.json()).then(h => {
+    if (h.app_name) { $("title").textContent = h.app_name + " Operator Dashboard"; document.title = h.app_name + " Operator Dashboard"; }
+  }).catch(() => {});
+
+  function toast(msg) {
+    $("toast").textContent = msg; $("toast").classList.remove("hidden");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.add("hidden"), 5000);
+  }
 
   // --- auth: the token lives only in this closure
   $("go").addEventListener("click", login);
@@ -135,34 +315,49 @@
   async function login() {
     token = $("token").value.trim();
     $("token").value = "";
+    $("loginErr").textContent = ""; $("loginSpin").classList.remove("hidden"); $("go").disabled = true;
     const r = await api("GET", "/api/operator/queue");
+    $("loginSpin").classList.add("hidden"); $("go").disabled = false;
     if (!r) { $("loginErr").textContent = "Token rejected."; token = ""; return; }
     $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("logoutBtn").classList.remove("hidden"); $("liveState").classList.remove("hidden");
     renderQueue(r); metrics(); listen();
   }
+  $("logoutBtn").addEventListener("click", () => {
+    token = ""; current = null; selected = null; editing = null; askMode = null; liveSessions = {};
+    clearTimeout(refreshTimer);
+    if (stream) stream.abort();
+    ["handoffs", "review", "done", "live", "audit", "metrics", "pGrid", "pText", "transcript"].forEach(id => { $(id).innerHTML = ""; });
+    $("packet").classList.add("hidden"); $("packetEmpty").classList.remove("hidden");
+    $("app").classList.add("hidden"); $("logoutBtn").classList.add("hidden"); $("liveState").classList.add("hidden");
+    $("login").classList.remove("hidden"); $("token").focus();
+  });
   async function api(method, path, body) {
     const opts = { method, headers: { "X-Operator-Token": token } };
     if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
     try {
       const res = await fetch(path, opts);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { if (current || method !== "GET") alert((data.detail || ("Error " + res.status))); return null; }
+      if (!res.ok) { if (current || method !== "GET") toast(String(data.detail || ("Error " + res.status))); return null; }
       return data;
     } catch (e) { return null; }
   }
 
   // --- queue
   function fmtWait(s) { return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${Math.floor(s / 3600)}h`; }
+  function statusChip(status) {
+    const kind = status === "claimed" ? "claimed" : status === "approved" ? "approved" : status === "rejected" ? "rejected" : "pending";
+    return `<span class="chip ${kind}" title="${esc(status)}">${kind}</span>`;
+  }
   function itemHTML(it, kind) {
-    const chips = [];
-    if (kind === "handoff") chips.push(`<span class="chip red">${esc(it.reason_label || it.handoff_reason)}</span>`);
+    const chips = [statusChip(it.status)];
+    if (kind === "handoff") chips.push(`<span class="chip reason">${esc(it.reason_label || it.handoff_reason)}</span>`);
     if (it.channel_label) chips.push(`<span class="chip src">${esc(it.channel_label)}</span>`);
-    if (it.status === "claimed") chips.push(`<span class="chip ok">claimed</span>`);
     if (it.has_verify) chips.push(`<span class="chip warn">⚠ verify</span>`);
-    if (kind === "done") chips.push(`<span class="chip ${it.status === "approved" ? "ok" : "warn"}">${esc(it.status)}</span>`);
-    return `<div class="item ${it.id === selected ? "sel" : ""}" data-id="${esc(it.id)}" title="Why here: ${esc(it.why_here)}">
+    return `<div class="item ${it.id === selected ? "sel" : ""}" data-id="${esc(it.id)}" tabindex="0" role="button" title="Why here: ${esc(it.why_here)}">
       <div class="top"><span>${kind === "review" ? "#" + (it.pos + 1) + " · " : ""}${esc(it.id)}</span><span class="muted">${fmtWait(it.waiting_s)}</span></div>
-      <div>${esc(it.fraud_label)} · ${it.n_txns} txn · ${esc(it.lang)} ${chips.join(" ")}</div>
+      <div>${esc(it.fraud_label)} · ${it.n_txns} txn · ${esc(it.lang)}</div>
+      <div class="tags">${chips.join("")}</div>
       ${kind === "review" ? `<div class="why">why here: ${esc(it.why_here)}</div>` : ""}</div>`;
   }
   function renderQueue(q) {
@@ -170,7 +365,7 @@
     $("review").innerHTML = q.review.map(i => itemHTML(i, "review")).join("") || '<div class="empty">Queue empty</div>';
     $("done").innerHTML = q.done.map(i => itemHTML(i, "done")).join("") || '<div class="empty">—</div>';
     $("nHand").textContent = q.handoffs.length; $("nRev").textContent = q.review.length;
-    $("audit").innerHTML = q.audit.map(a => `<div><b>${esc(a.packet_id)}</b> ${a.event === "reorder" ? `#${a.from_pos === null ? "new" : a.from_pos + 1} → #${a.to_pos + 1}` : esc(a.event)} · ${esc(a.reason)} <span class="muted">${new Date(a.at * 1000).toLocaleTimeString()}</span></div>`).join("");
+    $("audit").innerHTML = q.audit.map(a => `<div class="ev"><b>${esc(a.packet_id)}</b> ${a.event === "reorder" ? `#${a.from_pos === null ? "new" : a.from_pos + 1} → #${a.to_pos + 1}` : esc(a.event)} · ${esc(a.reason)}<span class="when">${new Date(a.at * 1000).toLocaleTimeString()}</span></div>`).join("") || '<div class="empty">No entries yet</div>';
     liveSessions = {};
     q.live.forEach(l => liveSessions[l.session] = l);
     renderLive();
@@ -186,14 +381,22 @@
         <div class="muted">${f.victim_bank ? esc(f.victim_bank.display) : ""} ${f.suspect_phone && f.suspect_phone.value ? "· suspect " + esc(f.suspect_phone.display) : ""}</div></div>`;
     }).join("") || '<div class="empty">No calls right now</div>';
   }
-  document.querySelector("main").addEventListener("click", e => {
+  $("app").addEventListener("click", e => {
     const it = e.target.closest(".item[data-id]"); if (it) openPacket(it.dataset.id);
   });
+  $("app").addEventListener("keydown", e => {
+    const it = e.target.closest && e.target.closest(".item[data-id]");
+    if (it && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openPacket(it.dataset.id); }
+  });
   async function refresh() {
+    if (!token) return;
     const q = await api("GET", "/api/operator/queue");
     if (q) renderQueue(q);
     metrics();
-    if (selected) { const p = await api("GET", "/api/operator/packet/" + encodeURIComponent(selected)); if (p) renderPacket(p); }
+    if (selected && !inputOpen()) {
+      const p = await api("GET", "/api/operator/packet/" + encodeURIComponent(selected));
+      if (p && !inputOpen()) renderPacket(p);
+    }
   }
   const soon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 250); };
 
@@ -202,18 +405,26 @@
       const m = await (await fetch("/api/metrics")).json();
       const pct = m.containment_rate === null ? "—" : Math.round(m.containment_rate * 100) + "%";
       const s = (x) => x === null || x === undefined ? "—" : x < 60 ? Math.round(x) + " s" : (x / 60).toFixed(1) + " min";
-      $("metrics").innerHTML = `<span>Calls handled by AI <b>${m.calls_handled_by_ai}/${m.calls_total}</b> (${pct})</span>
-        <span>Handoffs <b>${m.handoffs}</b></span><span>Median handling <b>${s(m.median_handling_s)}</b></span>
-        <span>Median approval <b>${s(m.median_approval_s)}</b></span>`;
+      $("metrics").innerHTML = `<div class="stat"><b>${m.calls_handled_by_ai}/${m.calls_total}</b><span>Calls handled by AI (${pct})</span></div>
+        <div class="stat"><b>${m.handoffs}</b><span>Handoffs</span></div>
+        <div class="stat"><b>${s(m.median_handling_s)}</b><span>Median handling</span></div>
+        <div class="stat"><b>${s(m.median_approval_s)}</b><span>Median approval</span></div>`;
     } catch (e) {}
   }
 
   // --- packet
   async function openPacket(id) {
-    selected = id;
-    const p = await api("GET", "/api/operator/packet/" + encodeURIComponent(id));
-    if (p) renderPacket(p);
+    selected = id; editing = null; closeAsk();
+    if (!current || current.id !== id) {
+      $("packetEmpty").classList.add("hidden"); $("packet").classList.add("hidden"); $("packetLoading").classList.add("on");
+    }
     document.querySelectorAll(".item[data-id]").forEach(el => el.classList.toggle("sel", el.dataset.id === id));
+    const p = await api("GET", "/api/operator/packet/" + encodeURIComponent(id));
+    $("packetLoading").classList.remove("on");
+    if (p) {
+      renderPacket(p);
+      if (matchMedia("(max-width: 900px)").matches) $("packetBox").scrollIntoView({ behavior: "smooth" });
+    }
   }
   function chips(f) {
     if (!f || (f.value === null && f.status !== "unconfirmed")) return "";
@@ -222,52 +433,87 @@
     const extra = f.corrections ? ` · corrected ${f.corrections}×` : "";
     return `<span class="chip ok">✓</span> <span class="chip src">${esc(f.source || "")}${extra}</span>`;
   }
+  const canDecide = (p) => ["ready_for_review", "claimed"].includes(p.status);
   function fieldRow(label, f, key, txn) {
     const v = f ? f.display : "—";
-    const editable = current && ["ready_for_review", "claimed"].includes(current.status);
-    return `<tr class="${f && f.verify ? "verify" : ""}"><th>${esc(label)}</th><td class="v">${esc(v)} ${chips(f)}
-      ${editable ? `<button class="edit" data-field="${key}" data-txn="${txn ?? ""}">Edit</button>` : ""}</td></tr>`;
+    const attrs = `data-field="${key}" data-txn="${txn ?? ""}" data-label="${esc(label)}"`;
+    return `<div class="fld ${f && f.verify ? "verify" : ""}" ${attrs}><div class="lbl">${esc(label)}</div><div class="val">${esc(v)} ${chips(f)}</div>
+      ${current && canDecide(current) ? `<button class="edit" aria-label="Edit ${esc(label)}" title="Edit ${esc(label)}">${PENCIL}</button>` : ""}</div>`;
   }
   function renderPacket(p) {
-    current = p;
+    current = p; editing = null;
     $("packetEmpty").classList.add("hidden"); $("packet").classList.remove("hidden");
     $("pTitle").textContent = p.id + " · " + p.fraud_label;
-    $("pStatus").innerHTML = `<span class="chip ${p.status === "approved" ? "ok" : p.status === "needs_human" ? "red" : "warn"}">${esc(p.status)}</span>`;
-    $("pReason").innerHTML = p.handoff_reason ? `<p><span class="chip red">${esc(p.handoff_reason)}</span> Warm handoff: the caller should not have to repeat the story. Read the transcript and the captured fields below.</p>` : "";
-    let rows = "";
-    p.txns.forEach((t, i) => {
-      rows += `<tr><th colspan="2" style="padding-top:10px">Transaction ${i + 1}</th></tr>`;
-      TXN.forEach(([k, l]) => rows += fieldRow(l, t[k], k, i));
-    });
-    rows += `<tr><th>Total</th><td class="v"><b>${esc(p.total_display)}</b> (${p.txns.length} transaction${p.txns.length === 1 ? "" : "s"})</td></tr>`;
-    rows += `<tr><th colspan="2" style="padding-top:10px">Case</th></tr>`;
-    CASE.forEach(([k, l]) => rows += fieldRow(l, p.fields[k], k, null));
-    $("pFields").innerHTML = rows;
+    $("pStatus").innerHTML = statusChip(p.status);
+    $("pReason").innerHTML = p.handoff_reason ? `<p><span class="chip reason">${esc(p.handoff_reason)}</span> Warm handoff: the caller should not have to repeat the story. Read the transcript and the captured fields below.</p>` : "";
+    const incomplete = (p.text || "").split("\n").find(l => l.startsWith("⚠ Incomplete"));  // this line reaches the operator only in the packet text
+    $("pNotice").innerHTML = incomplete ? `<div class="notice">${esc(incomplete.replace(/\s+:\s+/, ": "))}</div>` : "";
+    const txns = p.txns.map((t, i) => `<h3>Transaction ${i + 1}</h3>` + TXN.map(([k, l]) => fieldRow(l, t[k], k, i)).join("")).join("");
+    $("pGrid").innerHTML = `
+      <div class="pcard full"><h2>Transaction details</h2>${txns}
+        ${fieldRow("Payment mode", p.fields.payment_mode, "payment_mode", null)}
+        <div class="total"><span>Total</span><span>${esc(p.total_display)} (${p.txns.length} transaction${p.txns.length === 1 ? "" : "s"})</span></div></div>
+      <div class="pcard"><h2>Victim info</h2>${VICTIM.map(([k, l]) => fieldRow(l, p.fields[k], k, null)).join("")}</div>
+      <div class="pcard"><h2>Suspect info</h2>${SUSPECT.map(([k, l]) => fieldRow(l, p.fields[k], k, null)).join("")}</div>`;
     $("pText").textContent = p.text;
     const hand = p.status === "needs_human";
     $("claimBtn").classList.toggle("hidden", !hand);
-    $("approveBtn").disabled = !["ready_for_review", "claimed"].includes(p.status);
-    $("rejectBtn").disabled = !["ready_for_review", "claimed"].includes(p.status);
-    $("addTxnBtn").disabled = !["ready_for_review", "claimed"].includes(p.status);
+    $("approveBtn").disabled = !canDecide(p);
+    $("rejectBtn").disabled = !canDecide(p);
+    $("addTxnBtn").disabled = !canDecide(p);
     $("transcriptBox").classList.toggle("hidden", !p.transcript);
     $("transcript").innerHTML = (p.transcript || []).map(t => `<div>🗣 ${esc(t)}</div>`).join("") || '<div class="empty">No speech</div>';
   }
-  $("pFields").addEventListener("click", async e => {
-    const b = e.target.closest("button.edit"); if (!b || !current) return;
-    const field = b.dataset.field, txn = b.dataset.txn === "" ? null : Number(b.dataset.txn);
-    const hint = field === "datetime" ? " (dd-mm-yyyy hh:mm)" : field === "called_bank" ? " (yes/no)" : "";
-    const value = prompt(`New value for ${field}${txn !== null ? " (transaction " + (txn + 1) + ")" : ""}${hint}:`);
-    if (!value) return;
-    const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/edit`, { field, txn_index: txn, value });
-    if (p) { renderPacket(p); soon(); }
+
+  // --- inline edit: the pencil turns a field into an input; Enter saves, Esc cancels
+  $("pGrid").addEventListener("click", e => {
+    const b = e.target.closest("button.edit");
+    if (b && current) { startEdit(b.closest(".fld")); return; }
+    if (e.target.closest("button.cancel") && current) renderPacket(current);
   });
-  $("addTxnBtn").addEventListener("click", async () => {
-    if (!current) return;
-    const value = prompt("Amount of the new transaction (₹):");
+  function startEdit(row) {
+    if (editing) renderPacket(current);  // only one field open at a time; the re-render replaces `row`
+    const field = row.dataset.field, txnAttr = row.dataset.txn;
+    const fresh = document.querySelector(`.fld[data-field="${field}"][data-txn="${txnAttr}"]`);
+    const txn = txnAttr === "" ? null : Number(txnAttr);
+    editing = { field, txn };
+    const hint = field === "datetime" ? "dd-mm-yyyy hh:mm" : field === "called_bank" ? "yes / no" : "New value";
+    fresh.classList.add("editing");
+    fresh.querySelector(".val").innerHTML = `<form class="inline"><input type="text" autocomplete="off" placeholder="${esc(hint)}" aria-label="New value for ${esc(fresh.dataset.label)}">
+      <button type="submit" class="primary">Save</button><button type="button" class="cancel">Cancel</button></form>`;
+    fresh.querySelector("button.edit").classList.add("hidden");
+    fresh.querySelector("input").focus();
+  }
+  $("pGrid").addEventListener("keydown", e => { if (e.key === "Escape" && editing) renderPacket(current); });
+  $("pGrid").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!current || !editing) return;
+    const input = e.target.querySelector("input"), value = input.value.trim();
     if (!value) return;
-    const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/edit`, { field: "amount", txn_index: current.txns.length, value });
-    if (p) { renderPacket(p); soon(); }
+    const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/edit`, { field: editing.field, txn_index: editing.txn, value });
+    if (p) { renderPacket(p); soon(); }  // on a refused value the field stays open so it can be corrected
   });
+
+  // --- the two questions that need one line of text: a reject reason and a new transaction's amount
+  function openAsk(mode, label) {
+    askMode = mode;
+    $("askLabel").textContent = label; $("askInput").value = "";
+    $("askBar").classList.remove("hidden"); $("askInput").focus();
+  }
+  function closeAsk() { askMode = null; $("askBar").classList.add("hidden"); }
+  $("askCancel").addEventListener("click", closeAsk);
+  $("askInput").addEventListener("keydown", e => { if (e.key === "Escape") closeAsk(); });
+  $("askBar").addEventListener("submit", async e => {
+    e.preventDefault();
+    const value = $("askInput").value.trim();
+    if (!value || !current) return;
+    const mode = askMode;
+    const p = mode === "reject"
+      ? await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/reject`, { reason: value })
+      : await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/edit`, { field: "amount", txn_index: current.txns.length, value });
+    if (p) { closeAsk(); renderPacket(p); soon(); }
+  });
+  $("addTxnBtn").addEventListener("click", () => { if (current) openAsk("addTxn", "Amount of the new transaction (₹):"); });
   async function act(path, body) {
     if (!current) return;
     const p = await api("POST", `/api/operator/packet/${encodeURIComponent(current.id)}/${path}`, body);
@@ -275,7 +521,7 @@
   }
   $("claimBtn").addEventListener("click", () => act("claim"));
   $("approveBtn").addEventListener("click", () => act("approve"));
-  $("rejectBtn").addEventListener("click", () => { const r = prompt("Reason for rejecting:"); if (r) act("reject", { reason: r }); });
+  $("rejectBtn").addEventListener("click", () => openAsk("reject", "Reason for rejecting:"));
   $("copyBtn").addEventListener("click", () => current && navigator.clipboard.writeText(current.text).then(() => $("copyBtn").textContent = "Copied ✓"));
   $("jsonBtn").addEventListener("click", () => {
     if (!current) return;
@@ -286,9 +532,11 @@
 
   // --- live updates: SSE over fetch so the token travels in a header, never in a URL
   async function listen() {
-    for (;;) {
+    const ctl = new AbortController();
+    stream = ctl;
+    while (!ctl.signal.aborted) {
       try {
-        const res = await fetch("/api/events", { headers: { "X-Operator-Token": token } });
+        const res = await fetch("/api/events", { headers: { "X-Operator-Token": token }, signal: ctl.signal });
         if (!res.ok || !res.body) throw new Error("sse");
         $("dot").classList.add("on");
         const reader = res.body.getReader(), dec = new TextDecoder();
@@ -302,7 +550,7 @@
         }
       } catch (e) {}
       $("dot").classList.remove("on");
-      await new Promise(r => setTimeout(r, 3000));
+      if (!ctl.signal.aborted) await new Promise(r => setTimeout(r, 3000));
     }
   }
   function handle(block) {

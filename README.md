@@ -107,7 +107,7 @@ Caller (`app/api/routes_caller.py`):
 | Endpoint | Purpose |
 |---|---|
 | `POST /api/session` | `{lang, consent}` → opening prompt |
-| `POST /api/session/{id}/turn` | multipart `audio` (≤ 25 s) |
+| `POST /api/session/{id}/turn` | multipart `audio` (up to `MAX_TURN_S`; split into pieces for Prisma) |
 | `POST /api/session/{id}/sms` | pasted bank SMS, one or several (0 API calls) |
 | `POST /api/session/{id}/confirm` | ✓/✗ for a read-back chunk, or for `more_txn` / `review` / `dup_utr` / `called_bank` |
 | `POST /api/session/{id}/numpad` | typed value (authoritative), `{field, txn_index?, digits}` |

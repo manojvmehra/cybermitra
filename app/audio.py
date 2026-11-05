@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import wave
 
+import numpy as np
+
 
 class AudioError(Exception):
     pass
@@ -28,7 +30,7 @@ async def normalize(raw: bytes, max_s: float | None = None) -> bytes:
     if not raw:
         raise AudioError("empty audio")
     s = get_settings()
-    cap = (max_s if max_s is not None else s.MAX_CLIP_S) + 1
+    cap = (max_s if max_s is not None else s.MAX_TURN_S) + 1
     cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
            "-protocol_whitelist", "pipe", "-i", "pipe:0",
            "-t", f"{cap:.1f}", "-vn", "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", "-f", "wav", "pipe:1"]
@@ -79,3 +81,27 @@ def split_wav(wav_bytes: bytes, max_s: float) -> list[bytes]:
         frames = w.readframes(w.getnframes())
     step = int(max_s * rate) * ch * width
     return [pcm_to_wav(frames[i:i + step], rate, ch, width) for i in range(0, len(frames), step)]
+
+
+def split_at_quiet(wav_bytes: bytes, max_s: float, search_s: float = 5.0, hop_s: float = 0.02) -> list[bytes]:
+    """Split a 16-bit mono WAV into pieces of at most max_s, cutting at the quietest moment before each limit.
+
+    Prisma takes 30 s per request, so a long turn goes in pieces. Cutting in a pause keeps a spoken number whole.
+    """
+    with wave.open(io.BytesIO(wav_bytes), "rb") as w:
+        rate = w.getframerate()
+        pcm = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+    window, search, hop = int(max_s * rate), int(min(search_s, max_s / 2) * rate), max(1, int(hop_s * rate))
+    if len(pcm) <= window:
+        return [wav_bytes]
+    pieces, start = [], 0
+    while len(pcm) - start > window:
+        end = start + window
+        zone = pcm[end - search:end].astype(np.float64)
+        frames = len(zone) // hop
+        energy = (zone[:frames * hop] ** 2).reshape(frames, hop).sum(axis=1)
+        cut = end - search + int(np.argmin(energy)) * hop + hop // 2
+        pieces.append(pcm_to_wav(pcm[start:cut].tobytes(), rate))
+        start = cut
+    pieces.append(pcm_to_wav(pcm[start:].tobytes(), rate))
+    return pieces

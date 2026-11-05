@@ -40,6 +40,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await gnani_http.aclose()
 
 
+# Revalidate every load: a saved copy would hide updates, and its inline scripts would no longer match the CSP hashes.
+PAGE_HEADERS = {"Cache-Control": "no-cache"}
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     app = FastAPI(title=s.APP_NAME, lifespan=lifespan, docs_url="/docs" if s.ENABLE_DOCS else None,
@@ -59,11 +63,11 @@ def create_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     async def caller() -> FileResponse:
-        return FileResponse(STATIC / "caller.html", media_type="text/html; charset=utf-8")
+        return FileResponse(STATIC / "caller.html", media_type="text/html; charset=utf-8", headers=PAGE_HEADERS)
 
     @app.get("/operator", include_in_schema=False)
     async def operator() -> FileResponse:
-        return FileResponse(STATIC / "operator.html", media_type="text/html; charset=utf-8")
+        return FileResponse(STATIC / "operator.html", media_type="text/html; charset=utf-8", headers=PAGE_HEADERS)
 
     return app
 

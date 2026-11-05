@@ -66,6 +66,7 @@ def build(s: Session, status: str, reason: str | None = None, packet_id: str | N
         txns=[{k: f.model_copy() for k, f in t.fields.items()} for t in s.txns
               if any(f.value is not None for f in t.fields.values())],
         fields={k: f.model_copy() for k, f in s.fields.items() if k != "fraud_type"},
+        reported_txn_count=s.expected_txn_count or 0,
         transcript_masked=[mask_transcript(t) for t in s.transcripts] if status == "needs_human" else [],
         call_started_at=s.created_at, handled_s=round(end - s.created_at, 1),
     )
@@ -156,6 +157,9 @@ def render_text(p: Packet) -> str:
     if p.txns:
         lines.append(f"{'Total':<14}: {format_inr(p.total_amount())} ({len(p.txns)} transaction"
                      f"{'s' if len(p.txns) != 1 else ''})")
+    if p.reported_txn_count > len(p.txns):
+        lines.append(f"{'⚠ Incomplete':<14}: caller mentioned {p.reported_txn_count} transactions, "
+                     f"{len(p.txns)} captured. Ask about the rest.")
     lines += [
         f"{'Suspect phone':<14}: {_cell(f.get('suspect_phone'))}",
         f"{'Suspect UPI':<14}: {_cell(f.get('suspect_upi')):<34} Suspect bank: {_cell(f.get('suspect_bank'))}",

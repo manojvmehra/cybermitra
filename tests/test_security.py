@@ -45,9 +45,11 @@ def test_security_headers_and_csp_hash(client):
         csp.split("script-src")[1].split(";")[0]
     # the HTML parser normalises CRLF to LF before the browser hashes an inline script
     html = r.content.decode("utf-8").replace("\r\n", "\n")
-    script = re.search(r"<script>(.*?)</script>", html, re.S).group(1)
-    digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
-    assert f"'sha256-{digest}'" in csp  # the inline script is allowed by hash, nothing else is
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+    assert len(scripts) == 2  # the theme, set before first paint, and the page itself
+    for script in scripts:
+        digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+        assert f"'sha256-{digest}'" in csp  # inline scripts are allowed by hash, nothing else is
     assert r.headers["x-content-type-options"] == "nosniff"
     assert r.headers["x-frame-options"] == "DENY"
     assert r.headers["referrer-policy"] == "no-referrer"

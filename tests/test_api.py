@@ -1,5 +1,6 @@
 import io
 import math
+import re
 import struct
 import wave
 
@@ -126,11 +127,37 @@ def test_turn_with_audio(client, mock_gnani):
     assert m["gnani"]["calls_by_endpoint"].get("stt", 0) >= 1
 
 
-def test_turn_too_long(client, mock_gnani):
+def test_turn_too_long(client, mock_gnani, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("MAX_TURN_S", "30")
+    get_settings.cache_clear()
     stt_route = mock_gnani.post(f"{BASE}/stt/v3").mock(return_value=stt_ok("x"))
     sid = client.post("/api/session", json={"lang": "en", "consent": True}).json()["session_id"]
-    j = client.post(f"/api/session/{sid}/turn", files={"audio": ("a.wav", tone_wav(26), "audio/wav")}).json()
+    j = client.post(f"/api/session/{sid}/turn", files={"audio": ("a.wav", tone_wav(32), "audio/wav")}).json()
     assert j["error"] == "too_long" and stt_route.call_count == 0
+
+
+def test_long_turn_is_split_and_joined(client, mock_gnani):
+    stt_route = mock_gnani.post(f"{BASE}/stt/v3").mock(return_value=stt_ok("panam pochu"))
+    sid = client.post("/api/session", json={"lang": "en", "consent": True}).json()["session_id"]
+    j = client.post(f"/api/session/{sid}/turn", files={"audio": ("a.wav", tone_wav(60), "audio/wav")}).json()
+    assert j["error"] is None and stt_route.call_count == 3
+    assert j["transcript"].count("panam pochu") == 3
+
+
+def test_split_cuts_in_the_pause():
+    import numpy as np
+
+    from app import audio
+
+    rate = 16000
+    tone = (8000 * np.sin(np.arange(rate * 40) / 8)).astype(np.int16)
+    tone[rate * 22:rate * 23] = 0  # a pause inside the search zone before the 25 s limit
+    pieces = audio.split_at_quiet(audio.pcm_to_wav(tone.tobytes(), rate), 25)
+    lengths = [audio.duration_s(p) for p in pieces]
+    assert len(pieces) == 2 and 22 <= lengths[0] <= 23 and abs(sum(lengths) - 40) < 0.01
+    assert audio.split_at_quiet(pieces[1], 25) == [pieces[1]]
 
 
 def test_turn_bad_audio(client, mock_gnani):
@@ -371,4 +398,14 @@ def test_metrics_have_no_pii(client, mock_gnani, op):
 
 def test_operator_page_served(client):
     r = client.get("/operator")
-    assert r.status_code == 200 and "X-Operator-Token" in r.text and "localStorage" not in r.text
+    assert r.status_code == 200 and "X-Operator-Token" in r.text
+    # The only thing a page may keep in the browser is its theme: the operator token stays in memory.
+    keys = re.findall(r"localStorage\.\w+\(\s*([^,)]+)", r.text)
+    assert keys and set(keys) <= {'"cybermitra-theme"', "THEME_KEY"}
+    assert "sessionStorage" not in r.text and 'THEME_KEY = "cybermitra-theme"' in r.text
+    assert not [line for line in r.text.splitlines() if "localStorage" in line and "token" in line.lower()]
+
+
+def test_pages_are_revalidated_on_every_load(client):
+    for path in ("/", "/operator"):
+        assert client.get(path).headers["cache-control"] == "no-cache"

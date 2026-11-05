@@ -96,7 +96,7 @@ You are building **CyberMitra TN**, an **AI-first voice intake agent for Tamil N
 ```
 CALLER DEVICE (phone browser)                    OPERATOR DEVICE (laptop browser)
 static/caller.html                               static/operator.html
-tap-to-talk ≤25 s, SMS paste, ✓/✗, numpad        review queue, packet view, Approve/Edit/Reject,
+mic + silence stop, SMS paste, keypad            review queue, packet view, Approve/Edit/Reject,
    │ multipart audio / JSON                      "Take call" for handoffs
    ▼                                                ▲ SSE /api/events  │ JSON
 FastAPI (app/main.py) ─────────────────────────────┘                  │
@@ -119,7 +119,7 @@ State: in-memory dicts (sessions TTL 30 min, packets TTL 24 h). No DB.
 4. **Buttons beat voice for confirmation.** ✓/✗ is authoritative.
 5. **Any "no" wins.** An ambiguous voice answer counts as "no" and the chunk is re-asked.
 6. **Max 2 repair attempts per field**, then `status="unconfirmed"`. The packet shows "⚠ verify" and the operator sees it highlighted.
-7. **Multiple transactions.** A packet holds `transactions: list[Txn]` (max `MAX_TXNS`). After each transaction is confirmed, the AI asks *"Innoru transaction irukka?"* (Any other transaction?).
+7. **One transaction by default.** `MAX_TXNS` defaults to 1: after one confirmed transaction the call moves straight to the case fields, with no "any other transaction?" question. If the caller mentioned more, the packet says so (`reported_txn_count`) and the AI says an officer will add them. With `MAX_TXNS` above 1 the multi-transaction loop runs, asking *"Innoru transaction irukka?"* after each one.
 8. **AI-first, human by exception.** A completed call → `packet.status="ready_for_review"`. Escalation → `packet.status="needs_human"` with reason, masked transcript and partial fields (warm handoff).
 9. **Queue order never uses the amount** (§6.15).
 10. **Rank only on confirmed fields.** An unconfirmed time sorts as "unknown" (arrival order), never as "fresh".
@@ -235,8 +235,9 @@ EVON_TIMEOUT_S=8
 APP_NAME=CyberMitra
 SESSION_TTL_S=1800
 PACKET_TTL_S=86400
-MAX_CLIP_S=25
-MAX_TXNS=10
+MAX_CLIP_S=25                  # largest piece sent to Prisma in one request
+MAX_TURN_S=300                 # safety cap on one spoken turn; longer turns are split into MAX_CLIP_S pieces
+MAX_TXNS=1
 MAX_TURNS_PER_CALL=60
 SILENCE_HANDOFF_COUNT=2
 QUEUE_MAX_WAIT_S=300           # an item waiting longer than this jumps to the top (FIFO among overdue)
@@ -481,7 +482,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 |---|---|---|---|
 | GET | `/health` | — | `{ok, gnani_key_present, evon_mode}` |
 | POST | `/api/session` | `{lang, consent: true}` | `{session_id, state, prompt, demo_banner}` |
-| POST | `/api/session/{id}/turn` | multipart `audio` ≤25 s | `TurnResponse` |
+| POST | `/api/session/{id}/turn` | multipart `audio` ≤`MAX_TURN_S` | `TurnResponse` |
 | POST | `/api/session/{id}/sms` | `{text}` | `TurnResponse` |
 | POST | `/api/session/{id}/confirm` | `{field, txn_index, chunk_index, answer}` | `TurnResponse` |
 | POST | `/api/session/{id}/numpad` | `{field, txn_index, digits}` | `TurnResponse` |
@@ -527,20 +528,23 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 ## 8. FRONTEND — KEEP IT SIMPLE (two files, vanilla JS, no build)
 
 **`static/caller.html`** (meant for a phone):
-- Dark call-app look: near-black background, blue primary actions, glass cards, a faint rain animation (none for reduced motion). System fonts only: the CSP blocks external fonts.
-- In a call: timer, current question, mic and action buttons in one row, live level bars, tall scrollable transcript, SMS paste in an expandable panel. Up to 900px wide. From 768px the transcript sits beside the rest and stays in view; below that everything stacks.
-- Always visible: a small **Call 1930** `tel:` text link fixed to the bottom of the screen, and the DEMO banner.
+- Premium SaaS look shared with the operator page: dark purple/navy gradient (`#0D0B1A` → `#1A1333`), glass cards (16px radius), purple-to-blue gradient buttons (`#7C3AED` → `#3B82F6`, 12px radius), soft glows, 0.2s transitions, brand-coloured spinners, no animation for reduced motion. Inter when installed, otherwise system fonts: the CSP blocks external fonts.
+- Light and dark themes on both pages, dark by default. A sun/moon button in the nav toggles `data-theme` on `<html>` with a 0.3s transition, and the choice is kept in `localStorage`. All colours are CSS variables: `:root` is light, `[data-theme="dark"]` is dark.
+- Start screen: nav with logo, Demo badge and status; "Report Cyber Fraud" hero in English and Tamil; a large glowing Start Call button.
+- In a call: timer and session status in the nav. From 768px, a 40/60 grid with a 24px gap: keypad and mic (with level bars, Back and Skip) on the left; live transcript on the right, as chat bubbles (AI left/purple, caller right/blue), scrolling inside its own card. The transcript is the only place the AI's words appear: its newest AI message is the current question and is highlighted. Read-back digits and the typing box sit under the messages, in the same card. Paste SMS and Details sit below that row at full width. Below 768px everything stacks, keypad above transcript. Only the 1930 link is fixed to the screen; nothing else floats over the page.
+- Always visible: a small **Emergency? Call 1930** `tel:` link fixed to the bottom of the screen, and the DEMO banner.
 - Consent, language (Tamil/English), then one main **Start Call** button, which creates the session and shows the mic.
-- Tap-to-talk toggle (`MediaRecorder`, hard stop at 25 s): one tap starts, the next stops and sends, with a pulsing dot and a timer while recording. Paste-SMS box. A "Talk to a person" button.
-- Live field panel per transaction. Read-back panel with large digits + ✓/✗; numpad on ✗ or low confidence. The number box takes a whole number at once, typed or pasted, with or without spaces. A Back button returns to the previous step.
+- Mic (`MediaRecorder`): a tap (or `*` when no number is being asked) starts recording. About 2.5 s of silence after speech ends the turn and sends it; another tap or `#` ends it sooner. No visible timer. Paste-SMS box.
+- Permanent phone keypad (0-9, `*`, `#`) with the §6.16 mapping, labelled on the keys: 1 yes, 2 no, 3 repeat, 0 person, `*` type a number, `#` submit. Keys replace the ✓/✗ buttons and are just as authoritative. While a correction is being asked, keys are digits straight away.
+- Live field panel per transaction. Read-back panel with large digits, answered on the keypad. The number box takes a whole number at once, typed or pasted, with or without spaces. A Back button returns to the previous step.
 - End screen: Victim Summary + next steps + Copy/Share. Auto-play `prompt.audio_url`.
 
 **`static/operator.html`** (laptop):
 - Token prompt (kept in a JS variable only, no localStorage).
-- Two columns: **Handoffs** (red, reason chip, "Take call") and **Review queue** (order + wait time + "why here" tooltip from the audit log).
-- Packet view: CFCFRMS-order fields with ✓ / ⚠ chips; inline edit; **Approve** / Reject; Copy text / Download JSON.
+- Three columns. Left sidebar: **Handoffs** (reason chip, "Take call"), **Review queue** (order + wait time + "why here"), calls in progress, recently decided, with status badges: pending yellow, claimed blue, approved green, rejected red. Centre: metrics and the packet. Right: audit log timeline. Log out clears the token and stops the event stream.
+- Packet view: Transaction, Victim and Suspect cards with ✓ / ⚠ chips and inline edit; the packet text below keeps CFCFRMS field order; **Approve** / Reject pinned at the bottom; Copy text / Download JSON.
 - Live tile for in-progress calls (fields filling via SSE).
-- Metrics strip: calls handled by AI, handoffs, median handling time, median approval time.
+- Metrics tiles: calls handled by AI, handoffs, median handling time, median approval time.
 
 ---
 
@@ -623,7 +627,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 
 ## 13. DEFINITION OF DONE
 
-- [ ] A Tamil caller on a phone completes a **2-transaction** call. The packet appears in the operator queue **with no operator action** until Approve.
+- [ ] A Tamil caller on a phone completes a call (one transaction by default; 2 with `MAX_TXNS=2`). The packet appears in the operator queue **with no operator action** until Approve.
 - [ ] Operator fields fill **live** (SSE) while the caller speaks.
 - [ ] "Aal venum" mid-call → the handoff appears with transcript + already-confirmed fields; the caller is not asked again.
 - [ ] Suspect-phone read-back with a voice correction works on camera.

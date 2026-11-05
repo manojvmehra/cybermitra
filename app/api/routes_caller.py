@@ -26,7 +26,7 @@ logger = logging.getLogger("api")
 router = APIRouter()
 
 SESSIONS: dict[str, Session] = {}
-MAX_UPLOAD_BYTES = 6 * 1024 * 1024
+MAX_UPLOAD_BYTES = 6 * 1024 * 1024  # room for MAX_TURN_S of browser audio
 _SID = re.compile(r"[0-9a-f]{32}")
 ASK_STATES = {"ASK_MORE_TXN": "more_txn", "REVIEW": "review", "DUP_CHECK": "dup_utr"}
 
@@ -113,15 +113,18 @@ def commit(s: Session, acts: list[Action]) -> dict:
 async def process_wav(s: Session, wav: bytes) -> tuple[Session, list[Action], str | None, str | None]:
     """One spoken turn: STT, then the FSM. -> (session, actions, transcript, error). Audio is not kept."""
     settings = get_settings()
-    if audio.duration_s(wav) > settings.MAX_CLIP_S:
+    if audio.duration_s(wav) > settings.MAX_TURN_S:
         return s, [Action(type="SpeakPrompt", text=prompts.text("TOO_LONG", s.lang, s.channel))], None, "too_long"
     s = s.model_copy()
-    s.api_turns += 1  # every STT call counts toward the per-call cap, even silent clips
+    pieces = audio.split_at_quiet(wav, settings.MAX_CLIP_S)
+    s.api_turns += len(pieces)  # every STT call counts toward the per-call cap, even silent clips
     SESSIONS[s.id] = s
     profile = stt.SttProfile.from_settings(s.lang)
     try:
-        res = await stt.transcribe(wav, profile=profile, context=s.last_prompt_text or None,
-                                   request_id=f"{s.id}-{s.api_turns}", use_cache=settings.STT_CACHE_LIVE)
+        res = stt.join_results([
+            await stt.transcribe(piece, profile=profile, context=s.last_prompt_text or None,
+                                 request_id=f"{s.id}-{s.api_turns}-{i}", use_cache=settings.STT_CACHE_LIVE)
+            for i, piece in enumerate(pieces)])
     except GnaniError as e:
         log(logger, "stt failed", code=e.code, status=e.status)
         return s, [Action(type="SpeakPrompt", text=prompts.text("DIDNT_CATCH", s.lang, s.channel))], None, f"stt_{e.code}"

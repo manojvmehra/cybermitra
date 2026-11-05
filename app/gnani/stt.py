@@ -3,7 +3,7 @@
 import json
 import logging
 import unicodedata
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Literal
 
 from app import cache
@@ -88,6 +88,23 @@ def build_form(profile: SttProfile, bias_words: list[str] | None, context: str |
             data["bias_list"] = json.dumps(words, ensure_ascii=False)
             data["bias_score"] = str(profile.bias_score)
     return data
+
+
+def join_results(parts: list[SttResult]) -> SttResult:
+    """One turn cut into pieces reads as one result. A piece with no literal leaves the turn without one,
+    so the digit pipeline treats it as low confidence rather than comparing against a partial transcript."""
+    if len(parts) == 1:
+        return parts[0]
+    literals = [p.literal for p in parts]
+    return replace(
+        parts[0],
+        text=" ".join(p.text for p in parts if p.text.strip()),
+        literal=None if None in literals else " ".join(x for x in literals if x and x.strip()),
+        detected_language=next((p.detected_language for p in parts if p.detected_language), None),
+        truncated=any(p.truncated for p in parts),
+        latency_ms=sum(p.latency_ms for p in parts),
+        cached=all(p.cached for p in parts),
+    )
 
 
 async def transcribe(
