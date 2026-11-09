@@ -32,9 +32,9 @@ def session() -> Session:
 
 
 def test_packet_text_matches_cfcfrms_order():
-    text = P.render_text(P.build(session(), "ready_for_review", packet_id="CM-DRAFT-7F3A"))
+    text = P.render_text(P.build(session(), "ready_for_review", packet_id="CD-DRAFT-7F3A"))
     lines = text.splitlines()
-    assert lines[0].startswith("DRAFT — CM-DRAFT-7F3A — not filed.") and "not affiliated" in lines[0]
+    assert lines[0].startswith("DRAFT — CD-DRAFT-7F3A — not filed.") and "not affiliated" in lines[0]
     order = ["Status", "Fraud type", "Victim bank", "Called bank?", "Txn 1", "Txn 2", "Total", "Suspect phone",
              "Suspect UPI", "District", "Victim        :", "Handled by AI"]
     pos = [next(i for i, ln in enumerate(lines) if ln.startswith(k)) for k in order]
@@ -61,7 +61,7 @@ def test_ready_packet_has_no_transcript():
 
 def test_packet_id_format():
     pid = P.new_packet_id()
-    assert pid.startswith("CM-DRAFT-") and len(pid) == 13
+    assert pid.startswith("CD-DRAFT-") and len(pid) == 13
 
 
 def test_json_flags_verify_fields():
@@ -98,14 +98,14 @@ def test_last_debit_uses_confirmed_times_only():
 
 def test_victim_summary_and_draft_tags(monkeypatch):
     s = session()
-    v = P.victim_summary(s, "CM-DRAFT-7F3A")
+    v = P.victim_summary(s, "CD-DRAFT-7F3A")
     assert v["n_txns"] == 2 and v["total_display"] == "₹50,000"
-    assert "CM-DRAFT-7F3A" in v["text"] and "NCRP" in v["text"]
-    assert len(v["next_steps"]) == 5 and all(x["draft"] for x in v["next_steps"])  # no source recorded yet
+    assert "CD-DRAFT-7F3A" in v["text"] and "NCRP" in v["text"]
+    assert len(v["next_steps"]) == 4 and all(x["draft"] for x in v["next_steps"])  # no source recorded yet
     from app.dialog import prompts
-    monkeypatch.setattr(prompts, "NEXT_STEPS_SOURCED", {"NS_CALL_1930"})
-    v = P.victim_summary(s, "CM-DRAFT-7F3A")
-    assert [x["draft"] for x in v["next_steps"]] == [True, False, True, True, True]
+    monkeypatch.setattr(prompts, "NEXT_STEPS_SOURCED", {"NS_KEEP_EVIDENCE"})
+    v = P.victim_summary(s, "CD-DRAFT-7F3A")
+    assert [x["draft"] for x in v["next_steps"]] == [True, False, True, True]
 
 
 def test_no_forbidden_pii_reaches_packet():

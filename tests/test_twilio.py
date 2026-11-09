@@ -300,12 +300,12 @@ def test_configured_public_url_is_what_gets_signed(client, monkeypatch):
     assert r.status_code == 200 and "wss://fixed.example.com/api/twilio/stream" in r.text
 
 
-def test_rate_limited_caller_is_told_to_call_1930(client, monkeypatch):
+def test_rate_limited_caller_is_told_to_call_again(client, monkeypatch):
     monkeypatch.setenv("PER_IP_SESSIONS_PER_HOUR", "1")
     get_settings.cache_clear()
     post_voice(client)
     r = post_voice(client)
-    assert r.status_code == 200 and "1930" in r.text and "<Stream" not in r.text
+    assert r.status_code == 200 and "call again" in r.text and "<Stream" not in r.text
 
 
 # ---------------------------------------------------------------- stream auth
@@ -364,6 +364,22 @@ ANSWERS = {"datetime": "நேத்து மத்தியானம் மூ
            "district": "மதுரை", "victim_name": "டெஸ்ட் குமார்", "victim_mobile": "9000000001"}
 
 
+def reach(tw, field):
+    """Answer like a caller (1 on checks, 2 on 'another transaction?' and 'called the bank?', speak otherwise)
+    until the call asks for `field`."""
+    for _ in range(40):
+        s = call_session()
+        if s.state == "GAP_FILL" and s.current_field == field:
+            return
+        if s.state in ("READBACK", "STORY_CHECK"):
+            tw.press("1")
+        elif s.state == "ASK_MORE_TXN" or s.current_field == "called_bank":
+            tw.press("2")
+        else:
+            tw.say()
+    raise AssertionError(f"never asked for {field}")
+
+
 def test_scripted_call_reaches_the_review_queue(client):
     def prisma(_):
         s = next((x for x in routes_caller.SESSIONS.values() if x.channel == "phone"), None)
@@ -377,7 +393,7 @@ def test_scripted_call_reaches_the_review_queue(client):
         tw.say()
         for _ in range(60):
             s = call_session()
-            if s.state in ("READBACK", "REVIEW"):
+            if s.state in ("READBACK", "STORY_CHECK"):
                 tw.press("1")
             elif s.state == "ASK_MORE_TXN" or s.current_field == "called_bank":
                 tw.press("2")
@@ -433,8 +449,8 @@ def test_key_3_replays_what_was_just_said(client):
         tw.say()
         tw.played = 0
         tw.press("3")
-        assert tw.played == 800, "the key help and question again, not the whole call"
-        assert call_session().state == "READBACK", "repeating changes nothing"
+        assert tw.played == 400, "the question again, not the whole call"
+        assert call_session().state == "STORY_CHECK", "repeating changes nothing"
         tw.hang_up()
 
     run_call(client, body)
@@ -448,19 +464,18 @@ def test_key_2_then_typing_a_correction(client):
     client.gnani.post("/stt/v3").mock(side_effect=prisma)
 
     def body(tw):
-        tw.say()
-        tw.press("1")  # ✓ amount
-        tw.say()  # time
-        tw.press("1")
+        tw.say()  # story
+        reach(tw, "utr")  # numbers are asked last
         tw.say()  # UTR, read back as 4306 1982 7418
         assert call_session().readback.field == "utr"
         tw.press("1")
         tw.press("1")
         tw.press("2")  # the last group is wrong
         assert call_session().readback.awaiting == "correct"
+        tw.press("*", reply=False)  # typing starts only on star, as the prompt says
         tw.press("1299", reply=False)  # keys are digits now: 1 and 2 must not count as yes and no
         tw.press("#")  # typed digits are authoritative, so the call moves on without a read-back
-        assert call_session().state == "ASK_MORE_TXN"
+        assert call_session().current_field == "suspect_phone"
         tw.hang_up()
 
     run_call(client, body)
@@ -469,18 +484,21 @@ def test_key_2_then_typing_a_correction(client):
 
 
 def test_star_types_a_utr_and_hash_submits(client):
+    def prisma(_):
+        s = call_session()
+        return stt_ok("₹40,000 போச்சு" if s.state == "NARRATIVE" else ANSWERS.get(s.current_field, ""))
+
+    client.gnani.post("/stt/v3").mock(side_effect=prisma)
+
     def body(tw):
         tw.say()  # story
-        tw.press("1")  # ✓ amount
-        tw.say()  # time
-        tw.press("1")
-        assert call_session().current_field == "utr"
-        tw.press("*")
+        reach(tw, "utr")
+        assert not call_session().show_numpad, "typing starts only when the caller presses star"
+        tw.press("*", reply=False)  # starts the number, silently
         tw.press("430619827418", reply=False)
         tw.press("#")
         tw.hang_up()
 
-    stt_script(client, "₹40,000 போச்சு", ANSWERS["datetime"])
     run_call(client, body)
     f = packets()[0].txns[0]["utr"]
     assert f.value == "430619827418" and f.source == "numpad" and f.status == "confirmed"
@@ -644,9 +662,9 @@ def test_opening_says_experimental(lang):
     assert ("சோதனை" if lang == "ta" else "experimental") in prompts.text("OPENING", lang, "phone")
 
 
-def test_web_prompts_unchanged():
-    assert prompts.text("ASK_utr", "en") != prompts.text("ASK_utr", "en", "phone")
-    assert "Paste" in prompts.text("ASK_utr", "en")
+def test_web_and_phone_ask_for_the_utr_the_same_way():
+    assert prompts.text("ASK_utr", "en") == prompts.text("ASK_utr", "en", "phone")
+    assert "type" in prompts.text("ASK_utr", "en") and "hash" in prompts.text("ASK_utr", "en")
 
 
 def test_json_message_garbage_is_ignored(client):
@@ -657,3 +675,21 @@ def test_json_message_garbage_is_ignored(client):
         ws.send_text(json.dumps({"event": "media", "media": {"payload": "%%%"}}))
         ws.send_text(json.dumps({"event": "dtmf", "dtmf": {"digit": "x"}}))
         tw.hang_up()
+
+
+def test_2_on_a_number_question_means_dont_know(client):
+    def prisma(_):
+        s = call_session()
+        return stt_ok("₹40,000 போச்சு" if s.state == "NARRATIVE" else ANSWERS.get(s.current_field, ""))
+
+    client.gnani.post("/stt/v3").mock(side_effect=prisma)
+
+    def body(tw):
+        tw.say()
+        reach(tw, "utr")
+        tw.press("2")
+        assert call_session().current_field == "suspect_phone"
+        tw.hang_up()
+
+    run_call(client, body)
+    assert packets()[0].txns[0]["utr"].status == "skipped"

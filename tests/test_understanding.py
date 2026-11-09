@@ -6,7 +6,7 @@ import pytest
 
 from app.dialog.readback import render_datetime
 from app.dialog.state_machine import clean_name
-from app.nlp.extractor import find_datetime, find_upi
+from app.nlp.extractor import find_datetime, find_payment_mode, find_upi
 from app.nlp.yesno import classify
 from tests.test_state_machine import Dialog
 
@@ -72,7 +72,7 @@ def test_unclear_answer_reasks_without_spending_a_repair():
     d.say("50,000 rupees pochu")
     d.say("ம்")
     assert d.s.state == "READBACK" and d.s.readback.awaiting == "confirm"
-    assert not d.s.repair_attempts and "Say 'yes'" in d.spoken
+    assert not d.s.repair_attempts and "Press 1 if it is right" in d.spoken
     d.say("ம்")  # still unclear: now it is treated as "no"
     assert d.s.readback.awaiting == "correct" and d.s.repair_attempts["amount#0"] == 1
 
@@ -87,10 +87,77 @@ def test_unclear_never_confirms():
 
 def test_no_to_optional_upi_question_skips():
     d = Dialog()
-    d.say("ennoda panam pochu")
+    d.say("GPay la ennoda panam pochu")
     d.until("suspect_upi")
     d.say("இல்ல")
     assert d.s.fields["suspect_upi"].status == "skipped" and d.s.current_field == "suspect_bank"
+
+
+def _past_payment_mode(answer: str) -> Dialog:
+    d = Dialog()
+    d.say("ennoda panam pochu")
+    d.until("payment_mode")
+    d.say(answer)
+    if d.s.state == "READBACK":
+        d.say("yes")
+    return d
+
+
+@pytest.mark.parametrize("answer,mode", [
+    ("net banking", "Net banking"), ("debit card", "Card"), ("NEFT", "NEFT"), ("IMPS", "IMPS"), ("wallet", "Wallet"),
+])
+def test_upi_id_not_asked_for_other_payment_modes(answer, mode):
+    d = _past_payment_mode(answer)
+    assert d.s.fields["payment_mode"].value == mode
+    assert d.s.current_field == "suspect_bank"
+
+
+@pytest.mark.parametrize("text,mode", [
+    ("UPI illa card la pochu", "Card"), ("UPI இல்ல கார்டு", "Card"), ("gpay illa net banking", "Net banking"),
+    ("not by UPI, card", "Card"), ("card not UPI", "Card"), ("கார்ட்", "Card"), ("கார்டில் போச்சு", "Card"),
+    ("50,000 by UPI, from SBI", "UPI"), ("GPay, 50,000", "UPI"), ("UPI la anuppinen", "UPI"), ("card illa", None),
+])
+def test_payment_mode_reads_negation_and_punctuation(text, mode):
+    assert find_payment_mode(text) == mode
+
+
+def test_card_caller_who_rules_out_upi_is_not_asked_for_upi_id():
+    d = _past_payment_mode("UPI illa, card la")
+    assert d.s.fields["payment_mode"].value == "Card"
+    assert d.s.current_field == "suspect_bank"
+
+
+def test_upi_id_not_asked_when_payment_mode_unknown():
+    d = _past_payment_mode("theriyala")
+    assert d.s.fields["payment_mode"].value is None
+    assert d.s.current_field == "suspect_bank"
+
+
+def test_upi_id_asked_for_upi_payment():
+    assert _past_payment_mode("GPay la").s.current_field == "suspect_upi"
+
+
+def test_skipped_upi_question_keeps_the_packet_field():
+    d = _past_payment_mode("net banking")
+    d.finish()
+    assert d.s.state == "QUEUED"
+    assert "suspect_upi" in d.s.fields and d.s.fields["suspect_upi"].value is None
+    assert "Suspect UPI" in d.packet()
+
+
+def test_captured_upi_id_is_still_confirmed_on_other_payment_modes():
+    d = Dialog()
+    d.say("ennoda panam pochu")
+    d.until("payment_mode")
+    f = d.s.fields["suspect_upi"]
+    f.value, f.status, f.source = "fraud.pay@ybl", "pending", "voice"
+    d.say("net banking")
+    if d.s.current_field == "payment_mode":
+        d.say("yes")
+    assert (d.s.state, d.s.current_field) == ("READBACK", "suspect_upi")
+    d.finish()
+    assert d.s.fields["suspect_upi"].value == "fraud.pay@ybl"
+    assert d.s.fields["suspect_upi"].status == "confirmed"
 
 
 # ---------------------------------------------------------------- names and typed text

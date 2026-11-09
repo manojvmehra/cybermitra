@@ -169,10 +169,14 @@ def test_live_stt_and_readback_audio_never_touch_disk(client, mock_gnani):
     client.post(f"/api/session/{sid}/turn", files={"audio": ("a.wav", tone_wav(), "audio/wav")})
     cache_dir = Path(get_settings().CACHE_DIR)
     assert not (cache_dir / "stt").exists() or not any((cache_dir / "stt").iterdir())
-    for f in ("amount", "datetime", "utr"):  # get to the phone read-back
-        client.post(f"/api/session/{sid}/skip", json={"field": f, "txn_index": 0})
-    for f in ("more_txn", "victim_bank", "payment_mode"):
-        j = client.post(f"/api/session/{sid}/skip", json={"field": f}).json()
+    j = client.get(f"/api/session/{sid}/summary").json()
+    for _ in range(20):  # skip everything else to reach the phone read-back (numbers are asked last)
+        j = client.post(f"/api/session/{sid}/skip", json={"field": j.get("current_field") or "more_txn",
+                                                           "txn_index": j.get("current_txn")}).json()
+        if j["state"] == "READBACK" and j["readback"]["field"] == "suspect_phone":
+            break
+        if j.get("ask") == "called_bank":
+            j = client.post(f"/api/session/{sid}/confirm", json={"field": "called_bank", "answer": "no"}).json()
     assert j["state"] == "READBACK" and j["readback"]["field"] == "suspect_phone"
     # the read-back audio (speaks the digits) is served from memory with no-store
     url = j["prompt"]["audio_urls"][-1]
@@ -181,7 +185,7 @@ def test_live_stt_and_readback_audio_never_touch_disk(client, mock_gnani):
     r = client.get(url)
     assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
     # and its URL is random, not a hash of the text
-    assert token not in {tts.tts_key(t, "en-IN", s) for t in [j["prompt"]["text"]] for s in (0.9, 1.0)}
+    assert token not in {tts.tts_key(t, "en-IN", s) for t in [j["prompt"]["text"]] for s in (0.9, 1.0, 1.15)}
 
 
 def test_static_prompt_audio_is_cached_on_disk(client, mock_gnani):

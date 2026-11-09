@@ -1,4 +1,4 @@
-# CyberMitra TN — Claude Code Build Prompt (Backend-first)
+# CyberDesk TN — Claude Code Build Prompt (Backend-first)
 
 > Save as `CLAUDE.md` at the repo root.
 > Two static HTML pages (caller + operator). All effort goes into the backend, Gnani integration, number pipeline, call state machine, review queue, and benchmark.
@@ -7,7 +7,7 @@
 
 ## 0. ROLE AND GOAL
 
-You are building **CyberMitra TN**, an **AI-first voice intake agent for Tamil Nadu's 1930 cyber-fraud helpline overflow**, for the Gnani AI "Great Indian AI Internship Challenge 2026" (deadline **10 Nov 2026, 23:59 IST**).
+You are building **CyberDesk TN**, an **AI-first voice intake agent for Tamil Nadu's 1930 cyber-fraud helpline overflow**, for the Gnani AI "Great Indian AI Internship Challenge 2026" (deadline **10 Nov 2026, 23:59 IST**).
 
 **What it does**
 
@@ -35,10 +35,10 @@ You are building **CyberMitra TN**, an **AI-first voice intake agent for Tamil N
 6. **Never fabricate benchmark numbers.** All metrics are computed by `bench/` scripts from real API output. No target tables in the README.
 7. **Async + bounded concurrency.** Gnani may return `429 RATE_LIMITED` ("Only 1 active request is allowed at a time"). Wrap every Gnani call in a global `asyncio.Semaphore(GNANI_MAX_CONCURRENCY)` (default 1) with exponential backoff + jitter (max 4 tries).
 8. **Cache every Gnani call** by SHA-256 of (audio bytes or text) + all request params. Cache hits never hit the network.
-9. App name is a config value (`APP_NAME`, default `CyberMitra`). Never hardcode it.
+9. App name is a config value (`APP_NAME`, default `CyberDesk`). Never hardcode it.
 10. **No autonomous action.** Nothing leaves the system without an operator `approve`. Approval only changes packet status. It never submits anywhere.
 11. **Queue fairness.** The amount **never** affects queue order. Order uses only *operator-visible, caller-confirmed* fields (§6.15). Log every reorder with its reason.
-12. **Honest labels.** The draft reference ID is `CM-DRAFT-xxxx` and is never presented as an NCRP acknowledgement. Handoff in the demo is labelled "simulated transfer". Phone calls (§6.16) are labelled "experimental telephony".
+12. **Honest labels.** The draft reference ID is `CD-DRAFT-xxxx` and is never presented as an NCRP acknowledgement. Handoff in the demo is labelled "simulated transfer". Phone calls (§6.16) are labelled "experimental telephony".
 
 ---
 
@@ -129,7 +129,7 @@ State: in-memory dicts (sessions TTL 30 min, packets TTL 24 h). No DB.
 ## 4. REPO LAYOUT (create exactly this)
 
 ```
-cybermitra/
+cyberdesk/
 ├── CLAUDE.md
 ├── README.md                      # setup, run, architecture, HONEST measured results
 ├── .env.example
@@ -232,7 +232,7 @@ EVON_BASE_URL=http://localhost:8000/v1
 EVON_MODEL=model
 EVON_TIMEOUT_S=8
 
-APP_NAME=CyberMitra
+APP_NAME=CyberDesk
 SESSION_TTL_S=1800
 PACKET_TTL_S=86400
 MAX_CLIP_S=25                  # largest piece sent to Prisma in one request
@@ -393,7 +393,11 @@ CONSENT → OPENING → NARRATIVE
    → NEXT_STEPS → QUEUED → END
 Any state → HANDOFF_HUMAN | HANDOFF_NONFIN | HANDOFF_WELLBEING | END
 ```
-- **OPENING** (under 15 s, always): who the AI is, "not police, cannot freeze money", "I will never ask for OTP/PIN", one short line to call 1930, then straight to "tell me what happened". The bank helpline comes in NEXT_STEPS.
+- **OPENING** (always): the caller has dialled 1930 and the AI takes the call. Welcome to the 1930 cyber crime helpline, who the AI is (an AI assistant), the keys (1 yes, 2 no, to type a number press `*`, type it, then `#`), then **one question for the whole story**: what happened, when, how much, how it was paid (UPI / card / net banking) and from which bank, all in one go. No UTR or mobile number here. No "not police / cannot freeze / never ask for OTP" disclaimers and no "call 1930" line.
+- **STORY_CHECK** (after the story): one yes/no for everything the story gave ("Let me check: fifty thousand rupees, yesterday 3 PM, by UPI, from your SBI account. Is that right?"). Yes confirms them all; no (or a correction) reads each back on its own. Nothing to check → straight to the questions. Then only what the story left out is asked.
+- **Numbers are typed, last.** UTR (for each transaction) and mobile numbers (suspect, then victim) come after every spoken field. They are never asked aloud: the question says "type it, then press #" and opens the keypad. A number already heard in the story is read back instead. An amount is asked by voice; if it cannot be understood, the AI asks the caller to type it.
+- **No REVIEW question.** The call ends with one spoken summary ("I have noted …"), "we will send you an SMS with your reference number and next steps", goodbye, and the call ends by itself. The next steps are not spoken: they are in the SMS (the summary card on the caller page, labelled simulated in the demo; on the phone path the AI says no SMS is sent and reads the reference).
+- **Pace.** Prompts at Timbre speed 1.15, read-backs at 1.0; the caller page plays at 1.3x (pitch kept), about 1.5x overall for prompts. A pause of 1.2 s ends an answer (2 s during the story).
 - **Escalation triggers → HANDOFF_HUMAN:** caller asks for a human; 2 failed repairs on the same field *and* the numpad declined; `SILENCE_HANDOFF_COUNT` empty transcripts; `MAX_TURNS_PER_CALL` reached; 3 consecutive `UNKNOWN` intents.
 - On any HANDOFF: build the packet with what exists, `status="needs_human"`, attach `handoff_reason` + masked transcript, push to the queue, emit SSE, and tell the caller "Connecting you to an officer (simulated in demo). Please also call 1930."
 - Transitions are pure: `next_state(session, event) -> (session, actions)`. Events: `AUDIO_TURN(stt)`, `SMS_PASTED(text)`, `BUTTON(field, txn, chunk, yes|no)`, `NUMPAD(field, txn, digits)`, `SKIP(field)`, `BACK`, `TIMEOUT`, `OPERATOR_TAKEOVER`.
@@ -418,7 +422,7 @@ Two renderings of one `Packet`.
 
 **A. Complaint Packet (operator, CFCFRMS field order, copyable text + JSON):**
 ```
-DRAFT — CM-DRAFT-7F3A — not filed. {APP_NAME} is not affiliated with MHA, I4C, NCRP or TN Police.
+DRAFT — CD-DRAFT-7F3A — not filed. {APP_NAME} is not affiliated with MHA, I4C, NCRP or TN Police.
 Status        : ready_for_review | needs_human (reason)
 Fraud type    : OTP / bank impersonation
 Victim bank   : SBI  (a/c last 4: 1234)      Payment mode: UPI
@@ -439,10 +443,9 @@ Fields with `status="unconfirmed"` → `⚠ verify` and highlighted in the opera
 ### 6.14 NEXT_STEPS (in `dialog/prompts.py`)
 Keyed prompts in ta + en, spoken in order, max 5:
 1. `NS_CALL_BANK`: call your bank's helpline now, report fraud, ask to block card/UPI.
-2. `NS_CALL_1930`: if not done, call 1930 and give this reference summary.
-3. `NS_KEEP_EVIDENCE`: don't delete SMS, call logs or chats; take screenshots.
-4. `NS_CHANGE_PIN`: change net-banking/UPI PIN from your own phone.
-5. `NS_RECOVERY_SCAM`: anyone offering to "recover" money for a fee is another scam.
+2. `NS_KEEP_EVIDENCE`: don't delete SMS, call logs or chats; take screenshots.
+3. `NS_CHANGE_PIN`: change net-banking/UPI PIN from your own phone.
+4. `NS_RECOVERY_SCAM`: anyone offering to "recover" money for a fee is another scam.
 
 Every line needs an official source in `docs/NEXT_STEPS_SOURCES.md` before submission. Until a line has one, show it with a "draft guidance" tag in DEMO_MODE.
 
@@ -467,7 +470,7 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 - **Hang-up:** a caller who hangs up after saying anything still gets a `needs_human` packet with reason `caller_hung_up`.
 - **No screen on a phone:** the DTMF keypad replaces ✓/✗ and the numpad, and is authoritative like the buttons: **1 = yes, 2 = no, 3 = repeat, 0 = human**. To type a number, `*` starts entry on a numeric field and `#` submits; while a correction is being asked, keys are digits straight away. A key interrupts the AI. SMS paste is not available, so UTR and amount go through voice read-back or the keypad.
 - **Turns:** there is no push-to-talk, so an energy endpointer ends a turn after 1.2 s of quiet. The call is half duplex: the caller is heard only when the AI has finished speaking.
-- **Consent and honesty:** the opening is spoken and includes the "experimental" notice. The keys are explained right after the caller's story, so the opening stays short.
+- **Consent and honesty:** the opening is spoken and includes the "experimental" notice and the keys. The phone path sends no SMS and says so at the end.
 - **Privacy:** every §1 rule applies. The caller's number (`From`) is masked in logs and is not stored in the packet unless the caller gives it as a field. Test calls still use fake details only.
 - **Label:** shown as "experimental telephony" in the demo, the operator UI and the README. Handoff remains a simulated transfer.
 - **Tests:** Twilio mocked, signature rejection, the µ-law ↔ 16 kHz round trip, one scripted call reaching the queue, and the routes absent when disabled.
@@ -527,17 +530,15 @@ Lets someone dial a real number and talk to the AI. `TWILIO_ENABLED=false` by de
 
 ## 8. FRONTEND — KEEP IT SIMPLE (two files, vanilla JS, no build)
 
-**`static/caller.html`** (meant for a phone):
+**`static/caller.html`** (a phone call screen):
 - Premium SaaS look shared with the operator page: dark purple/navy gradient (`#0D0B1A` → `#1A1333`), glass cards (16px radius), purple-to-blue gradient buttons (`#7C3AED` → `#3B82F6`, 12px radius), soft glows, 0.2s transitions, brand-coloured spinners, no animation for reduced motion. Inter when installed, otherwise system fonts: the CSP blocks external fonts.
 - Light and dark themes on both pages, dark by default. A sun/moon button in the nav toggles `data-theme` on `<html>` with a 0.3s transition, and the choice is kept in `localStorage`. All colours are CSS variables: `:root` is light, `[data-theme="dark"]` is dark.
-- Start screen: nav with logo, Demo badge and status; "Report Cyber Fraud" hero in English and Tamil; a large glowing Start Call button.
-- In a call: timer and session status in the nav. From 768px, a 40/60 grid with a 24px gap: keypad and mic (with level bars, Back and Skip) on the left; live transcript on the right, as chat bubbles (AI left/purple, caller right/blue), scrolling inside its own card. The transcript is the only place the AI's words appear: its newest AI message is the current question and is highlighted. Read-back digits and the typing box sit under the messages, in the same card. Paste SMS and Details sit below that row at full width. Below 768px everything stacks, keypad above transcript. Only the 1930 link is fixed to the screen; nothing else floats over the page.
-- Always visible: a small **Emergency? Call 1930** `tel:` link fixed to the bottom of the screen, and the DEMO banner.
-- Consent, language (Tamil/English), then one main **Start Call** button, which creates the session and shows the mic.
-- Mic (`MediaRecorder`): a tap (or `*` when no number is being asked) starts recording. About 2.5 s of silence after speech ends the turn and sends it; another tap or `#` ends it sooner. No visible timer. Paste-SMS box.
-- Permanent phone keypad (0-9, `*`, `#`) with the §6.16 mapping, labelled on the keys: 1 yes, 2 no, 3 repeat, 0 person, `*` type a number, `#` submit. Keys replace the ✓/✗ buttons and are just as authoritative. While a correction is being asked, keys are digits straight away.
-- Live field panel per transaction. Read-back panel with large digits, answered on the keypad. The number box takes a whole number at once, typed or pasted, with or without spaces. A Back button returns to the previous step.
-- End screen: Victim Summary + next steps + Copy/Share. Auto-play `prompt.audio_url`.
+- One centred phone-width column. Before the call: a dialler showing **1930** ("Cyber Crime Helpline"), language (Tamil/English), a short consent card and a green round call button.
+- In the call: the callee (1930, Cyber Crime Helpline · AI), the call timer and status (Speaking / Listening / Muted / On hold), live captions (the newest AI line highlighted), a display above the keypad, a plain 12-key phone keypad (digits only, no yes/no labels: the opening explains the keys), and Mute, a red End call button and Repeat.
+- Half duplex like the phone path: once the AI finishes speaking the line listens by itself; 1.2 s of quiet after speech ends the turn (2 s during the story). Prompt audio plays at 1.3x. A key press interrupts the AI and the open recording.
+- Keys follow §6.16: 1 yes, 2 no, 3 repeat, 0 officer, `*` starts typing a number, `#` submits. A question that needs a number (UTR, mobile numbers, an amount the AI could not get, a correction) opens typing straight away; `*` then starts the number again. The display shows what is typed (with the digit count) or the part of a number being read back.
+- End call is hanging up: a call with anything in it still reaches an officer (`needs_human`, `caller_hung_up`). No SMS paste, details table, Back or Skip on this screen (the API still has them).
+- After the call: the Victim Summary as "SMS from 1930 · simulated in this demo" (reference, total, next steps) + Copy/Share; the call hangs up by itself after the goodbye; on a handoff, "connecting you to an officer (simulated)" and Tele-MANAS for wellbeing. The footer says it is a demo, not connected to the real 1930 line.
 
 **`static/operator.html`** (laptop):
 - Token prompt (kept in a JS variable only, no localStorage).

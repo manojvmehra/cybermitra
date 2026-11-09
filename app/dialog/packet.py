@@ -52,7 +52,7 @@ def mask_transcript(t: str) -> str:
 
 
 def new_packet_id() -> str:
-    return f"CM-DRAFT-{secrets.token_hex(2).upper()}"
+    return f"CD-DRAFT-{secrets.token_hex(2).upper()}"
 
 
 def build(s: Session, status: str, reason: str | None = None, packet_id: str | None = None) -> Packet:
@@ -213,7 +213,7 @@ def victim_summary(s: Session, packet_id: str | None) -> dict[str, Any]:
     txt = [head, body, ""]
     for i, st in enumerate(steps, 1):
         txt.append(f"{i}. {st['text']}" + (" [draft guidance]" if st["draft"] else ""))
-    txt.append("Call 1930 · cybercrime.gov.in")
+    txt.append("1930 · cybercrime.gov.in")
     return {"packet_id": packet_id, "n_txns": len(amounts), "total": total, "total_display": format_inr(total),
             "next_steps": steps, "text": "\n".join(txt), "handoff": s.handoff,
             "operator_claimed": s.operator_claimed, "generated_at": datetime.now().isoformat(timespec="seconds")}

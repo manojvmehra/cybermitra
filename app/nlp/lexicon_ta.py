@@ -324,7 +324,11 @@ PAYMENT_MODES: dict[str, list[str]] = {
     "UPI": ["upi", "gpay", "google pay", "phonepe", "phone pe", "paytm", "bhim", "qr", "யுபிஐ", "ஜிபே", "போன்பே"],
     "IMPS": ["imps"],
     "NEFT": ["neft", "rtgs"],
-    "Card": ["card", "debit card", "credit card", "கார்டு", "atm"],
+    "Card": ["card", "debit card", "credit card", "கார்டு", "கார்ட்", "கார்டில்", "atm"],
     "Net banking": ["net banking", "netbanking", "internet banking", "நெட் பேங்கிங்"],
     "Wallet": ["wallet", "வாலட்"],
 }
+# "UPI illa, card" / "not by UPI": a payment word next to one of these was ruled out, not named
+PAYMENT_NEGATED_AFTER = {"illa", "illai", "illae", "alla", "இல்ல", "இல்லை", "இல்லே", "அல்ல"}
+PAYMENT_NEGATED_BEFORE = {"not"}
+PAYMENT_NEGATION_LINKS = {"by", "via", "through", "using"}

@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     TTS_MODEL: str = "timbre-v2.5"
     TTS_VOICE_TA: str = "Asmita"
     TTS_VOICE_EN: str = "Kaveri"
-    TTS_SPEED_PROMPT: float = 1.0
-    TTS_SPEED_READBACK: float = 0.9
+    TTS_SPEED_PROMPT: float = 1.15  # Timbre allows 0.85-1.15; the caller page plays faster on top
+    TTS_SPEED_READBACK: float = 1.0
     TTS_SAMPLE_RATE: int = 24000
 
     EVON_MODE: Literal["off", "openai_compat"] = "off"
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     EVON_MODEL: str = "model"
     EVON_TIMEOUT_S: float = 8
 
-    APP_NAME: str = "CyberMitra"
+    APP_NAME: str = "CyberDesk"
     SESSION_TTL_S: int = 1800
     PACKET_TTL_S: int = 86400
     MAX_CLIP_S: float = 25  # largest piece sent to Prisma in one request (Prisma's own limit is 30 s)

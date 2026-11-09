@@ -59,14 +59,15 @@ def test_health(client):
 
 def test_index(client):
     r = client.get("/")
-    assert r.status_code == 200 and "Call 1930" in r.text and "tel:1930" in r.text
+    assert r.status_code == 200 and 'aria-label="Call 1930"' in r.text
 
 
-def test_caller_page_starts_a_call_and_uses_a_mic_toggle(client):
+def test_caller_page_is_a_phone_call(client):
     page = client.get("/").text
-    assert 'id="startCall"' in page and "Tap to talk" in page
-    assert 'class="call" href="tel:1930">📞' not in page  # 1930 is a text link, not the main action
-    assert "pointerdown" not in page and "Hold to talk" not in page
+    assert 'id="startCall"' in page and 'id="endCall"' in page and 'id="dial"' in page
+    assert "Tap to talk" not in page and "Hold to talk" not in page  # the line listens by itself, like a call
+    assert "Yes / ஆம்" not in page and "No / இல்லை" not in page  # plain keys: the opening says what they do
+    assert "tel:1930" not in page  # the caller is already on 1930
 
 
 def test_back_undoes_an_answer_and_is_offered_only_when_possible(client):
@@ -103,7 +104,7 @@ def test_session_flow_sms_and_summary(client, mock_gnani):
 
     summary = client.get(f"/api/session/{sid}/summary").json()
     assert summary["n_txns"] == 1 and summary["total_display"] == "₹50,000"
-    assert [s["id"] for s in summary["next_steps"]][:2] == ["NS_CALL_BANK", "NS_CALL_1930"]
+    assert [s["id"] for s in summary["next_steps"]][:2] == ["NS_CALL_BANK", "NS_KEEP_EVIDENCE"]
     assert client.delete(f"/api/session/{sid}").status_code == 204
     assert client.get(f"/api/session/{sid}/summary").status_code == 404
 
@@ -115,14 +116,14 @@ def test_turn_with_audio(client, mock_gnani):
     ])
     sid = client.post("/api/session", json={"lang": "en", "consent": True}).json()["session_id"]
     j = client.post(f"/api/session/{sid}/turn", files={"audio": ("a.wav", tone_wav(), "audio/wav")}).json()
-    assert j["state"] == "READBACK" and j["readback"]["field"] == "amount" and j["readback"]["txn_index"] == 0
+    assert j["state"] == "STORY_CHECK" and j["ask"] == "story"  # one check for what the story gave
     amt = j["txns"][0]["amount"]
-    assert amt["value"] == 50000 and amt["confidence"] == "high"
-    j = client.post(f"/api/session/{sid}/confirm",
-                    json={"field": "amount", "txn_index": 0, "chunk_index": 0, "answer": "yes"}).json()
+    assert amt["value"] == 50000 and amt["confidence"] == "high" and amt["status"] == "pending"
+    j = client.post(f"/api/session/{sid}/confirm", json={"field": "story", "answer": "yes"}).json()
     assert j["txns"][0]["amount"]["status"] == "confirmed"
+    assert j["state"] == "GAP_FILL" and j["current_field"] == "datetime"
     j = client.post(f"/api/session/{sid}/skip", json={"field": "datetime", "txn_index": 0}).json()
-    assert j["txns"][0]["datetime"]["status"] == "skipped" and j["current_field"] == "utr"
+    assert j["txns"][0]["datetime"]["status"] == "skipped" and j["state"] == "ASK_MORE_TXN"  # the UTR comes last
     m = client.get("/api/metrics").json()
     assert m["gnani"]["calls_by_endpoint"].get("stt", 0) >= 1
 
@@ -206,7 +207,7 @@ def test_human_button_warm_handoff(client, mock_gnani):
     sid = client.post("/api/session", json={"lang": "en", "consent": True}).json()["session_id"]
     j = client.post(f"/api/session/{sid}/sms", json={"text": SMS}).json()
     j = client.post(f"/api/session/{sid}/human").json()
-    assert j["state"] == "HANDOFF_HUMAN" and j["packet_id"].startswith("CM-DRAFT-")
+    assert j["state"] == "HANDOFF_HUMAN" and j["packet_id"].startswith("CD-DRAFT-")
     assert j["summary"]["packet_id"] == j["packet_id"]
     assert "simulated" in j["prompt"]["text"]
 
@@ -251,7 +252,7 @@ def full_call(client, mock_gnani, handoff: bool = False) -> tuple[str, dict]:
     assert j["state"] == "ASK_MORE_TXN" and j["ask"] == "more_txn"
     j = client.post(f"/api/session/{sid}/confirm", json={"field": "more_txn", "answer": "no"}).json()
     for _ in range(30):
-        if j["state"] == "REVIEW":
+        if j["state"] == "QUEUED":
             break
         if j["ask"] == "called_bank":
             j = client.post(f"/api/session/{sid}/confirm", json={"field": "called_bank", "answer": "yes"}).json()
@@ -261,8 +262,7 @@ def full_call(client, mock_gnani, handoff: bool = False) -> tuple[str, dict]:
             j = client.post(f"/api/session/{sid}/numpad", json={"field": "district", "digits": "Madurai"}).json()
         else:
             j = client.post(f"/api/session/{sid}/skip", json={"field": j["current_field"]}).json()
-    assert j["state"] == "REVIEW" and j["ask"] == "review"
-    j = client.post(f"/api/session/{sid}/confirm", json={"field": "review", "answer": "yes"}).json()
+    assert j["state"] == "QUEUED"  # no review question: the call ends with its summary
     return sid, j
 
 
@@ -280,9 +280,9 @@ def test_operator_disabled_without_token(client, monkeypatch):
 
 def test_two_txn_call_reaches_queue_without_operator_action(client, mock_gnani, op):
     sid, j = full_call(client, mock_gnani)
-    assert j["state"] == "QUEUED" and j["packet_id"].startswith("CM-DRAFT-")
+    assert j["state"] == "QUEUED" and j["packet_id"].startswith("CD-DRAFT-")
     assert j["summary"]["n_txns"] == 2 and j["summary"]["total_display"] == "₹60,000"
-    assert len(j["summary"]["next_steps"]) == 5
+    assert len(j["summary"]["next_steps"]) == 4
     q = client.get("/api/operator/queue", headers=OP).json()
     assert [i["id"] for i in q["review"]] == [j["packet_id"]] and not q["handoffs"]
     p = client.get(f"/api/operator/packet/{j['packet_id']}", headers=OP).json()
@@ -401,11 +401,26 @@ def test_operator_page_served(client):
     assert r.status_code == 200 and "X-Operator-Token" in r.text
     # The only thing a page may keep in the browser is its theme: the operator token stays in memory.
     keys = re.findall(r"localStorage\.\w+\(\s*([^,)]+)", r.text)
-    assert keys and set(keys) <= {'"cybermitra-theme"', "THEME_KEY"}
-    assert "sessionStorage" not in r.text and 'THEME_KEY = "cybermitra-theme"' in r.text
+    assert keys and set(keys) <= {'"cyberdesk-theme"', "THEME_KEY"}
+    assert "sessionStorage" not in r.text and 'THEME_KEY = "cyberdesk-theme"' in r.text
     assert not [line for line in r.text.splitlines() if "localStorage" in line and "token" in line.lower()]
 
 
 def test_pages_are_revalidated_on_every_load(client):
     for path in ("/", "/operator"):
         assert client.get(path).headers["cache-control"] == "no-cache"
+
+
+def test_hanging_up_after_speaking_reaches_an_officer(client, mock_gnani):
+    mock_gnani.post(f"{BASE}/stt/v3").mock(return_value=stt_ok("50,000 rupees pochu"))
+    sid = client.post("/api/session", json={"lang": "en", "consent": True}).json()["session_id"]
+    client.post(f"/api/session/{sid}/turn", files={"audio": ("a.wav", tone_wav(), "audio/wav")})
+    assert client.post(f"/api/session/{sid}/hangup").status_code == 204
+    s = client.get(f"/api/session/{sid}/summary").json()
+    assert s["handoff"] == "HANDOFF_HUMAN"
+
+
+def test_hanging_up_before_saying_anything_drops_the_call(client):
+    sid = client.post("/api/session", json={"lang": "en", "consent": True}).json()["session_id"]
+    assert client.post(f"/api/session/{sid}/hangup").status_code == 204
+    assert client.get(f"/api/session/{sid}/summary").status_code == 404

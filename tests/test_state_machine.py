@@ -6,13 +6,21 @@ from app.dialog.state_machine import next_state
 
 
 class Dialog:
-    def __init__(self, lang: str = "en") -> None:
+    """story_check="no" answers the one-shot story check with 2, so a test walks the per-field read-backs;
+    None leaves the check for the test to answer."""
+
+    def __init__(self, lang: str = "en", story_check: str | None = "no") -> None:
         self.s = Session(lang=lang)  # type: ignore[arg-type]
         self.acts: list = []
+        self.story_check = story_check
         self.send(Event(type="START"))
 
     def send(self, ev: Event) -> "Dialog":
         self.s, self.acts = next_state(self.s, ev)
+        if self.story_check and self.s.state == "STORY_CHECK" and ev.type != "BACK":
+            first = self.acts
+            self.s, self.acts = next_state(self.s, Event(type="BUTTON", field="story", answer=self.story_check))
+            self.acts = first + self.acts
         return self
 
     def say(self, text: str, literal: str | None = None) -> "Dialog":
@@ -61,9 +69,9 @@ class Dialog:
         raise AssertionError(f"never asked for {field}")
 
     def finish(self) -> None:
-        """Answer the rest with "don't know" until REVIEW."""
+        """Answer the rest with "don't know" until the call ends with its summary."""
         for _ in range(60):
-            if self.s.state == "REVIEW":
+            if self.s.state == "QUEUED":
                 return
             if self.s.state == "READBACK":
                 self.button("yes")
@@ -73,7 +81,7 @@ class Dialog:
                 self.yesno("called_bank", "no")
             else:
                 self.say("theriyala")
-        raise AssertionError("did not reach REVIEW")
+        raise AssertionError("did not reach QUEUED")
 
     def packet(self, status: str = "ready_for_review") -> str:
         return P.render_text(P.build(self.s, status, self.s.handoff_reason))
@@ -91,37 +99,34 @@ SMS_3 = ("Rs.5,000.00 debited from A/c XX1234 on 02-11-26 15:20 to VPA fraud.pay
 def test_start_speaks_opening():
     d = Dialog()
     d.at("NARRATIVE")
-    for must in ("AI", "not the police", "cannot freeze", "1930", "OTP"):
+    for must in ("1930", "AI", "Press 1 for yes", "2 for no", "press star", "hash", "in one go", "what happened",
+                 "when", "how much", "UPI", "which bank"):
         assert must in d.spoken
+    assert "OTP" not in d.spoken and "freeze" not in d.spoken  # the caller dialled 1930: no disclaimers
 
 
 def test_happy_path_one_transaction():
-    d = Dialog()
+    d = Dialog(story_check=None)
     d.say(NARRATIVE, LITERAL)
-    d.at("READBACK", "amount", 0)
+    # one check for everything the story gave
+    d.at("STORY_CHECK")
+    assert "fifty thousand rupees" in d.spoken and "from your SBI account" in d.spoken
     assert d.s.txns[0].fields["amount"].value == 50000
     assert d.s.txns[0].fields["amount"].confidence == "high"
     assert d.s.fields["fraud_type"].value == "OTP_BANK_CALL"
     assert "Transaction" not in d.spoken  # one transaction: no "Transaction 1:" prefix
-    d.say("aama")
+    d.yesno("story", "yes")
+    assert d.s.txns[0].fields["amount"].status == "confirmed"
+    assert d.s.fields["victim_bank"].status == "confirmed"
+    # then only what the story left out
     d.at("GAP_FILL", "datetime", 0)
     d.say("yesterday evening 3 mani")
     d.at("READBACK", "datetime")
     d.say("yes")
-    d.at("GAP_FILL", "utr")
-    d.say("four three zero six one nine eight two seven four one eight")
-    for _ in range(3):
-        d.say("yes")
-    d.at("ASK_MORE_TXN")
+    d.at("ASK_MORE_TXN")  # the tests run with MAX_TXNS=10
     d.say("illa, adhu mattum thaan")
-    d.at("READBACK", "victim_bank")
-    d.say("sari")
     d.at("GAP_FILL", "payment_mode")
     d.say("GPay la anuppinen")
-    d.say("yes")
-    d.at("READBACK", "suspect_phone")
-    assert d.s.fields["suspect_phone"].value == "9876543218"
-    d.say("yes")
     d.say("yes")
     d.at("GAP_FILL", "suspect_upi")
     d.say("theriyala")
@@ -135,21 +140,55 @@ def test_happy_path_one_transaction():
     d.at("GAP_FILL", "victim_name")
     d.say("my name is Test Kumar")
     d.say("yes")
+    # typed numbers come last
+    d.at("GAP_FILL", "utr")
+    d.send(Event(type="NUMPAD", field="utr", txn_index=0, digits="4306 1982 7418"))
+    d.at("READBACK", "suspect_phone")  # heard in the story, so read back rather than typed
+    assert d.s.fields["suspect_phone"].value == "9876543218"
+    d.say("yes")
+    d.say("yes")
     d.at("GAP_FILL", "victim_mobile")
-    d.say("nine one two three four five six seven eight zero")
-    d.say("yes")
-    d.say("yes")
-    d.at("REVIEW")
-    assert "Transactions: 1, total ₹50,000" in d.spoken
-    d.say("yes")
+    d.send(Event(type="NUMPAD", field="victim_mobile", digits="9123456780"))
+    # no review question: a spoken summary, the SMS, goodbye
     d.at("QUEUED")
+    assert "I have noted fifty thousand rupees, yesterday, 3 PM, by UPI, from your SBI account" in d.spoken
+    assert "SMS" in d.spoken and "Goodbye" in d.spoken
+    assert "Call your bank" not in d.spoken  # the next steps go in the SMS, not the call
     push = [a for a in d.acts if a.type == "PushPacket"]
     assert push and push[0].data["status"] == "ready_for_review"
-    assert "Call your bank" in d.spoken and "recover" in d.spoken  # next steps spoken
     text = d.packet()
     for must in ("₹50,000", "[voice ✓]", "98765 43218", "Madurai", "4306 1982 7418", "UPI", "Called bank?  : No",
                  "Total         : ₹50,000 (1 transaction)", "Handled by AI"):
         assert must in text, (must, text)
+
+
+def test_story_check_no_reads_each_value_back():
+    d = Dialog(story_check=None)
+    d.say("nethu 3 mani SBI account la irundhu 40,000 rupees pochu, GPay la")
+    d.at("STORY_CHECK")
+    assert "forty thousand rupees" in d.spoken and "by UPI" in d.spoken and "from your SBI account" in d.spoken
+    d.yesno("story", "no")
+    assert "one by one" in d.spoken
+    d.at("READBACK", "amount", 0)
+    assert all(f.status != "confirmed" for f in (d.s.txns[0].fields["amount"], d.s.fields["victim_bank"]))
+
+
+def test_story_check_by_voice_and_unclear_answer():
+    d = Dialog(story_check=None)
+    d.say("40,000 rupees pochu")
+    d.at("STORY_CHECK")
+    d.say("mm")
+    d.at("STORY_CHECK")
+    assert "Press 1 if it is right" in d.spoken
+    d.say("aama")
+    assert d.s.txns[0].fields["amount"].status == "confirmed"
+    d.at("GAP_FILL", "datetime", 0)
+
+
+def test_story_with_nothing_to_check_goes_to_the_questions():
+    d = Dialog(story_check=None)
+    d.say("enakku romba bayama irukku")  # no amount, time, mode or bank
+    d.at("GAP_FILL", "amount", 0)
 
 
 def test_three_transactions_two_voice_one_sms():
@@ -163,16 +202,11 @@ def test_three_transactions_two_voice_one_sms():
     d.at("GAP_FILL", "datetime", 0)
     d.say("nethu 3 mani")
     d.button("yes")
-    d.at("GAP_FILL", "utr", 0)
-    d.say("four three zero six one nine eight two seven four one eight")
-    d.yes(3)
     d.at("READBACK", "amount", 1)
     assert "Transaction 2:" in d.spoken
     d.button("yes")
     d.say("nethu 3:10")
     d.button("yes")
-    d.at("GAP_FILL", "utr", 1)
-    d.send(Event(type="SKIP", field="utr", txn_index=1))
     d.at("ASK_MORE_TXN")
     assert "3 times" in d.spoken  # caller said three; two captured so far
     d.say("aama, innoru irukku")
@@ -182,8 +216,13 @@ def test_three_transactions_two_voice_one_sms():
     assert t3["amount"].value == 5000 and t3["amount"].source == "sms" and t3["utr"].status == "confirmed"
     d.at("ASK_MORE_TXN")
     d.yesno("more_txn", "no")
+    d.until("utr", 0)  # typed numbers are asked last, for each transaction still missing one
+    d.say("four three zero six one nine eight two seven four one eight")
+    d.yes(3)
+    d.at("GAP_FILL", "utr", 1)
+    d.send(Event(type="SKIP", field="utr", txn_index=1))
     d.finish()
-    assert "Transactions: 3, total ₹55,000" in d.spoken
+    assert "I have noted" in d.spoken
     text = d.packet()
     assert "Txn 3" in text and "₹55,000 (3 transactions)" in text and "[sms]" in text
 
@@ -200,6 +239,7 @@ def test_sms_paste_two_debits_makes_two_transactions():
     assert len(d.s.txns) == 2  # the spoken 40,000 is the pasted debit, not a third one
     d.at("ASK_MORE_TXN")  # SMS fields are not re-read
     d.yesno("more_txn", "no")
+    d.until("suspect_phone")  # numbers come last; this one was heard in the story, so it is read back
     d.at("READBACK", "suspect_phone")
 
 
@@ -294,7 +334,7 @@ def test_silence_twice_handoff_with_partial_packet():
     d.say("")
     d.at("HANDOFF_HUMAN")
     assert d.s.handoff_reason == "silence"
-    assert "1930" in d.spoken and "simulated" in d.spoken
+    assert "stay on the line" in d.spoken and "simulated" in d.spoken
     push = [a for a in d.acts if a.type == "PushPacket"]
     assert push[0].data == {"status": "needs_human", "reason": "silence"}
     p = P.build(d.s, "needs_human", "silence")
@@ -315,7 +355,7 @@ def test_aal_venum_mid_call_warm_handoff_keeps_confirmed_fields():
     d.say("aama")
     d.say("yesterday evening 3 mani")
     d.say("yes")
-    d.at("GAP_FILL", "utr")
+    d.at("ASK_MORE_TXN")
     d.say("enakku aal venum")
     d.at("HANDOFF_HUMAN")
     assert d.s.handoff_reason == "caller_request"
@@ -389,19 +429,21 @@ def test_duplicate_utr_detected():
     d.button("yes")
     d.say("nethu 3 mani")
     d.button("yes")
-    d.say("four three zero six one nine eight two seven four one eight")
-    d.yes(3)
     d.at("READBACK", "amount", 1)
     d.button("yes")
     d.say("nethu 3 mani")
     d.button("yes")
+    d.yesno("more_txn", "no")
+    d.until("utr", 0)
+    d.say("four three zero six one nine eight two seven four one eight")
+    d.yes(3)
     d.at("GAP_FILL", "utr", 1)
     d.say("four three zero six one nine eight two seven four one eight")
     d.at("DUP_CHECK")
     assert "same transaction" in d.spoken
     d.yesno("dup_utr", "yes")
     assert len(d.s.txns) == 1
-    d.at("ASK_MORE_TXN")
+    assert d.s.state != "DUP_CHECK" and d.s.current_field != "utr"
 
 
 def test_duplicate_utr_no_means_reask():
@@ -517,18 +559,12 @@ def test_high_amount_extra_confirmation():
     assert "ten lakh" in d.spoken
 
 
-def test_review_no_then_yes():
+def test_call_ends_with_a_summary_and_no_review_question():
     d = Dialog()
     d.say("ennoda panam pochu")
     d.finish()
-    d.yesno("review", "no")
-    d.at("REVIEW")
-    assert "Tap the wrong detail" in d.spoken
-    d.send(Event(type="NUMPAD", field="amount", txn_index=0, digits="2500"))
-    d.at("REVIEW")
-    assert "₹2,500" in d.spoken
-    d.yesno("review", "yes")
     d.at("QUEUED")
+    assert "your complaint" in d.spoken and "SMS" in d.spoken  # nothing confirmed to sum up
     assert any(a.type == "ShowSummary" for a in d.acts)
 
 
@@ -709,8 +745,7 @@ def test_a_reasked_question_is_not_a_step():
 def test_back_can_undo_a_chain_of_answers():
     d = Dialog()
     d.say(NARRATIVE, LITERAL)
-    d.finish()
-    d.at("REVIEW")
+    d.until("victim_mobile")
     while d.s.history:
         d.send(Event(type="BACK"))
     d.at("NARRATIVE")
@@ -721,7 +756,6 @@ def test_back_does_nothing_after_the_packet_is_pushed():
     d = Dialog()
     d.say(NARRATIVE, LITERAL)
     d.finish()
-    d.yesno("review", "yes")
     d.at("QUEUED")
     d.send(Event(type="BACK"))
     d.at("QUEUED")
@@ -767,3 +801,80 @@ def test_whole_utr_said_during_a_correction_replaces_the_number():
     assert d.s.txns[0].fields["utr"].value == "111122223333"
     d.at("READBACK", "utr")
     assert d.s.txns[0].fields["utr"].status == "pending"
+
+
+# ---------------------------------------------------------------- the 1930 line: numbers are typed
+def test_utr_is_asked_to_be_typed_after_star():
+    d = Dialog()
+    d.say("50,000 rupees pochu")
+    d.button("yes")
+    d.until("utr", 0)
+    d.at("GAP_FILL", "utr")
+    assert "press star, type it, then press hash" in d.spoken and "press 2" in d.spoken
+    assert not any(a.type == "ShowNumpad" for a in d.acts), "typing starts only when the caller presses star"
+    d.send(Event(type="NUMPAD", field="utr", txn_index=0, digits="430619827418"))
+    f = d.s.txns[0].fields["utr"]
+    assert f.value == "430619827418" and f.status == "confirmed" and f.source == "numpad"
+
+
+def test_mobile_numbers_are_asked_to_be_typed():
+    d = Dialog()
+    d.say("50,000 rupees pochu")
+    d.until("suspect_phone")
+    assert "fraudster called from: press star, type it" in d.spoken
+    d.yesno("suspect_phone", "no")  # 2: "I don't know it"
+    assert d.s.fields["suspect_phone"].status == "skipped"
+    d.at("GAP_FILL", "victim_mobile")
+    assert "Your mobile number: press star" in d.spoken
+
+
+def test_typed_number_with_the_wrong_length_says_how_many_digits():
+    d = Dialog()
+    d.say("50,000 rupees pochu")
+    d.until("suspect_phone")
+    d.send(Event(type="NUMPAD", field="suspect_phone", digits="98765"))
+    assert "5 digits" in d.spoken and "type it again" in d.spoken
+    d.at("GAP_FILL", "suspect_phone")
+
+
+def test_an_amount_the_ai_cannot_understand_is_typed():
+    d = Dialog()
+    d.say("theriyala")  # no amount in the story
+    d.at("GAP_FILL", "amount")
+    d.say("romba panam")  # "a lot of money": no number in it
+    assert "Press star, type the amount" in d.spoken
+    d.send(Event(type="NUMPAD", field="amount", txn_index=0, digits="25000"))
+    f = d.s.txns[0].fields["amount"]
+    assert f.value == 25000 and f.status == "confirmed" and f.source == "numpad"
+
+
+def test_mobile_starting_with_0_to_5_says_why():
+    d = Dialog()
+    d.say("50,000 rupees pochu")
+    d.until("victim_mobile")
+    d.send(Event(type="NUMPAD", field="victim_mobile", digits="1234567890"))
+    assert "starts with 6, 7, 8 or 9" in d.spoken
+    d.at("GAP_FILL", "victim_mobile")
+    d.send(Event(type="NUMPAD", field="victim_mobile", digits="9123456780"))
+    assert d.s.fields["victim_mobile"].status == "confirmed"
+
+
+def test_noise_on_a_typed_number_question_explains_the_keys_and_costs_nothing():
+    d = Dialog()
+    d.say("50,000 rupees pochu")
+    d.until("victim_mobile")
+    for _ in range(4):  # no number in it: never "didn't catch", never a give-up or handoff
+        d.say("hmm okay")
+        d.at("GAP_FILL", "victim_mobile")
+        assert "Press star, type it" in d.spoken and "didn't catch" not in d.spoken
+    assert not d.s.repair_attempts.get("victim_mobile")
+
+
+def test_a_wrong_typed_number_again_and_again_moves_on():
+    d = Dialog()
+    d.say("50,000 rupees pochu")
+    d.until("victim_mobile")
+    for _ in range(3):
+        d.send(Event(type="NUMPAD", field="victim_mobile", digits="12345"))
+    assert d.s.fields["victim_mobile"].status == "unconfirmed"  # an officer checks it; the call is not stuck
+    assert d.s.current_field != "victim_mobile"

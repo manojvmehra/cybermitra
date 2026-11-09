@@ -17,7 +17,7 @@ FieldName = Literal["amount", "datetime", "utr", "victim_bank", "payment_mode", 
 # yes/no questions answered by a button rather than a read-back chunk
 ConfirmTarget = Literal["amount", "datetime", "utr", "victim_bank", "payment_mode", "suspect_phone", "suspect_upi",
                         "suspect_bank", "called_bank", "district", "victim_name", "victim_mobile",
-                        "more_txn", "review", "dup_utr"]
+                        "more_txn", "review", "dup_utr", "story"]
 
 
 class ConfirmIn(BaseModel):

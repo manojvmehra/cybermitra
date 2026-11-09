@@ -28,7 +28,7 @@ router = APIRouter()
 SESSIONS: dict[str, Session] = {}
 MAX_UPLOAD_BYTES = 6 * 1024 * 1024  # room for MAX_TURN_S of browser audio
 _SID = re.compile(r"[0-9a-f]{32}")
-ASK_STATES = {"ASK_MORE_TXN": "more_txn", "REVIEW": "review", "DUP_CHECK": "dup_utr"}
+ASK_STATES = {"ASK_MORE_TXN": "more_txn", "REVIEW": "review", "DUP_CHECK": "dup_utr", "STORY_CHECK": "story"}
 
 
 def _sweep() -> None:
@@ -246,6 +246,19 @@ async def human(sid: str) -> TurnResponse:
     """The caller pressed "Talk to a person": warm handoff with everything captured so far."""
     s, acts = next_state(_get(sid), Event(type="HUMAN"))
     return await _respond(s, acts)
+
+
+@router.post("/api/session/{sid}/hangup", status_code=204)
+async def hangup(sid: str) -> Response:
+    """The caller ended the call. Once they have told us anything it still reaches an officer, as on the phone line
+    (needs_human, caller_hung_up); a call that never got going is dropped."""
+    s = SESSIONS.get(sid)
+    if s is not None and s.state != "QUEUED" and not s.handoff:
+        if s.turns or s.history:
+            commit(*next_state(s, Event(type="HUMAN", text="hangup")))
+        else:
+            SESSIONS.pop(sid, None)
+    return Response(status_code=204)
 
 
 @router.get("/api/session/{sid}/summary")

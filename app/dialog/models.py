@@ -7,7 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 Lang = Literal["ta", "en"]
-State = Literal["CONSENT", "OPENING", "NARRATIVE", "GAP_FILL", "READBACK", "ASK_MORE_TXN", "DUP_CHECK", "REVIEW",
+State = Literal["CONSENT", "OPENING", "NARRATIVE", "STORY_CHECK", "GAP_FILL", "READBACK", "ASK_MORE_TXN", "DUP_CHECK", "REVIEW",
                 "QUEUED", "HANDOFF_HUMAN", "HANDOFF_NONFIN", "HANDOFF_WELLBEING", "END"]
 Status = Literal["empty", "pending", "confirmed", "unconfirmed", "skipped"]
 PacketStatus = Literal["ready_for_review", "needs_human", "claimed", "approved", "rejected"]
@@ -160,7 +160,7 @@ class AuditEntry(BaseModel):
 
 
 class Packet(BaseModel):
-    id: str  # CM-DRAFT-XXXX
+    id: str  # CD-DRAFT-XXXX
     session_id: str
     lang: Lang
     channel: Channel = "web"

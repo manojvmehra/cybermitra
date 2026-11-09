@@ -41,7 +41,7 @@ MIN_SPEECH_MS = 200  # shorter bursts are a click or a cough
 CHUNK_BYTES = 8000  # one second of audio per outbound message
 MAX_KEYED_DIGITS = 16
 KEYPAD_FIELDS = {*DIGIT_FIELDS, "amount"}  # a phone keypad can only enter numbers
-YES_NO_STATES = {"ASK_MORE_TXN": "more_txn", "REVIEW": "review", "DUP_CHECK": "dup_utr"}
+YES_NO_STATES = {"ASK_MORE_TXN": "more_txn", "REVIEW": "review", "DUP_CHECK": "dup_utr", "STORY_CHECK": "story"}
 
 
 # ---------------------------------------------------------------- µ-law (ITU-T G.711)
@@ -255,7 +255,7 @@ class CallBridge:
             await self._answer("yes" if key == "1" else "no")
         elif key == "*" and self._numeric_field():
             self._begin_entry(*self._numeric_field())  # type: ignore[misc]
-            await self._speak_id("USE_NUMPAD")
+            await self._resume()  # the opening already said how: type, then hash
         else:
             await self._resume()
 
@@ -272,6 +272,8 @@ class CallBridge:
             ev = Event(type="BUTTON", field=YES_NO_STATES[s.state], answer=answer)  # type: ignore[arg-type]
         elif s.state == "GAP_FILL" and s.current_field == "called_bank":
             ev = Event(type="BUTTON", field="called_bank", answer=answer)  # type: ignore[arg-type]
+        elif s.state == "GAP_FILL" and s.current_field in KEYPAD_FIELDS and answer == "no":
+            ev = Event(type="BUTTON", field=s.current_field, answer="no")  # type: ignore[arg-type]  # don't know
         else:
             await self._resume()
             return
@@ -284,8 +286,9 @@ class CallBridge:
             digits, self.keyed = self.keyed, None
             await self._apply(*next_state(self.s, Event(type="NUMPAD", field=field, txn_index=txn, digits=digits)))
         elif key == "*":
-            self.keyed = None
-            await self._play(self.last_audio)
+            # The question may have opened the keypad already, so star (as the opening says) starts the number again
+            self.keyed = ""
+            await self._resume()
         else:
             if len(self.keyed) < MAX_KEYED_DIGITS:
                 self.keyed += key
@@ -311,10 +314,6 @@ class CallBridge:
     async def _apply(self, s: Session, acts: list[Action]) -> None:
         routes_caller.commit(s, acts)
         self.s = s
-        for a in acts:
-            field = a.data.get("field")
-            if a.type == "ShowNumpad" and field in KEYPAD_FIELDS:
-                self._begin_entry(field, a.data.get("txn_index"))
         segments = [(a.text or "", a.speed) for a in acts if a.type == "SpeakPrompt" and a.text]
         if s.state in TERMINAL:
             self.ending = True

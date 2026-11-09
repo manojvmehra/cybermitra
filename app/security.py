@@ -92,7 +92,8 @@ class SecurityHeaders:
         self.csp = "; ".join([
             "default-src 'self'",
             "script-src 'self' " + " ".join(script_hashes),
-            "style-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com",
             "media-src 'self' blob:",
             "img-src 'self' data:",
             "connect-src 'self'",

@@ -1,9 +1,11 @@
 """Per-call dialogue FSM. next_state() is pure: no network, no clock except session timestamps.
 
-CONSENT → OPENING → NARRATIVE
-  → TXN loop: GAP_FILL(amount → datetime → utr|sms) → READBACK(each) → ASK_MORE_TXN ↺
-  → CASE fields: GAP_FILL(victim_bank … victim_mobile) → READBACK
-  → REVIEW → (NEXT_STEPS spoken) → QUEUED
+CONSENT → OPENING (one question for the whole story) → NARRATIVE
+  → STORY_CHECK (one yes/no for what the story gave: amount, time, payment mode, bank; "no" reads each back)
+  → TXN loop: GAP_FILL(amount → datetime) → READBACK(each) → ASK_MORE_TXN ↺
+  → CASE fields: GAP_FILL(victim_bank … victim_name) → READBACK
+  → typed numbers last: utr (each txn) → suspect_phone → victim_mobile
+  → QUEUED (spoken summary, "we will send an SMS", the call ends)
 Any state → HANDOFF_HUMAN | HANDOFF_NONFIN | HANDOFF_WELLBEING
 """
 
@@ -42,7 +44,13 @@ from app.nlp.sms_parser import parse_sms_multi, sms_datetime
 TERMINAL = {"HANDOFF_HUMAN", "HANDOFF_NONFIN", "HANDOFF_WELLBEING", "END", "QUEUED"}
 TEXT_FIELDS = {"victim_bank", "suspect_bank", "payment_mode", "datetime", "victim_name", "district", "suspect_upi",
                "called_bank"}
-YESNO_BUTTONS = {"more_txn", "review", "dup_utr", "called_bank"}
+YESNO_BUTTONS = {"more_txn", "review", "dup_utr", "called_bank", "story"}
+# What the opening asks the caller to tell in one go, checked with a single yes/no
+STORY_FIELDS = (("amount", True), ("datetime", True), ("payment_mode", False), ("victim_bank", False))
+# Typed on the keypad, so asked last, after everything the caller can just say
+TYPED_LAST = ("suspect_phone", "victim_mobile")
+# Number questions: star then the number then hash types it; 2 means "don't know"
+KEYPAD_FIELDS = {*DIGIT_FIELDS, "amount"}
 UNKNOWN_HANDOFF = 3
 GAVE_UP_HANDOFF = 2
 MAX_BACK_STEPS = 30
@@ -84,11 +92,11 @@ def _handoff(s: Session, acts: list[Action], kind: str, reason: HandoffReason) -
 
 
 def _queue(s: Session, acts: list[Action]) -> None:
+    """One spoken summary and goodbye; the next steps go in the SMS (the summary on screen in the demo)."""
     s.state = "QUEUED"
     _end(s)
-    _speak(s, acts, "QUEUED")
-    for pid in prompts.NEXT_STEPS:
-        _speak(s, acts, pid)
+    facts = _facts(s, [(n, t, f) for n, txn, t, f in story_items(s, settled_only=True)])
+    _speak(s, acts, "QUEUED", facts=facts or prompts.text("NO_FACTS", s.lang, s.channel))
     acts.append(Action(type="PushPacket", data={"status": "ready_for_review"}))
     acts.append(Action(type="ShowSummary"))
 
@@ -154,6 +162,8 @@ def _ask(s: Session, acts: list[Action], field: str, txn: int | None) -> None:
     s.current_field = field
     s.current_txn = txn if field in TXN_FIELDS else None
     s.readback = None
+    # UTR and mobile numbers are typed. Typing starts only when the caller presses star, as the question says,
+    # so until then 2 means "don't know" and 3 repeats.
     s.show_numpad = False
     pre = _prefix(s, field, txn)
     if pre:
@@ -208,6 +218,11 @@ def _next_open(s: Session, f: FieldState, field: str, txn: int | None, acts: lis
     return True
 
 
+def _upi_not_relevant(s: Session, name: str) -> bool:
+    """Ask for a UPI ID only on a UPI payment. A value already captured is still checked, so it reaches the packet."""
+    return name == "suspect_upi" and s.fields[name].value is None and s.fields["payment_mode"].value != "UPI"
+
+
 def _advance(s: Session, acts: list[Action]) -> None:
     _update(s, acts)
     if s.phase == "TXN":
@@ -218,7 +233,7 @@ def _advance(s: Session, acts: list[Action]) -> None:
                 continue
             s.txn_cursor = i
             for name in TXN_FIELDS:
-                if _next_open(s, t.fields[name], name, i, acts):
+                if name != "utr" and _next_open(s, t.fields[name], name, i, acts):
                     return
         if len(s.txns) >= get_settings().MAX_TXNS:
             if (s.expected_txn_count or 0) > len(s.txns):  # the caller mentioned more than we take on this call
@@ -234,18 +249,78 @@ def _advance(s: Session, acts: list[Action]) -> None:
             _speak(s, acts, "ASK_MORE_TXN")
             return
     for name in CASE_FIELDS:
+        if name in TYPED_LAST or _upi_not_relevant(s, name):
+            continue
+        if _next_open(s, s.fields[name], name, None, acts):
+            return
+    for i, t in enumerate(s.txns):
+        if _next_open(s, t.fields["utr"], "utr", i, acts):
+            return
+    for name in TYPED_LAST:
         if _next_open(s, s.fields[name], name, None, acts):
             return
     _review(s, acts)
 
 
 def _review(s: Session, acts: list[Action]) -> None:
-    s.state = "REVIEW"
+    """Every field has been checked one by one, so the call ends with a summary rather than another question."""
+    _queue(s, acts)
+
+
+# ---------------------------------------------------------------- the story, checked in one go
+def story_items(s: Session, settled_only: bool = False) -> list[tuple[str, int | None, str, FieldState]]:
+    """(field, txn, words for it, state) for the story fields that have a value: pending ones for the check,
+    confirmed ones for the closing summary."""
+    out: list[tuple[str, int | None, str, FieldState]] = []
+    for name, in_txn in STORY_FIELDS:
+        targets: list[tuple[int | None, FieldState]] = (
+            [(i, t.fields[name]) for i, t in enumerate(s.txns)] if in_txn else [(None, s.fields[name])])
+        for i, f in targets:
+            if f.value is None or (f.status != "confirmed" if settled_only else f.status != "pending"):
+                continue
+            if name == "datetime":
+                words = readback.render_datetime(readback.with_precision(str(f.value), f.precision), s.lang)
+            elif name == "amount":
+                words = readback.chunk_words("amount", str(f.value), s.lang)
+            else:
+                words = prompts.text(f"FACT_{name}", s.lang, s.channel, v=f.value)
+            out.append((name, i, words, f))
+    return out
+
+
+def _facts(s: Session, items: list[tuple[str, str, FieldState]]) -> str:
+    return ", ".join(words for _, words, _ in items)
+
+
+def _story_check(s: Session, acts: list[Action]) -> None:
+    items = story_items(s)
+    if not items:
+        _advance(s, acts)
+        return
+    s.state = "STORY_CHECK"
     s.current_field = None
     s.current_txn = None
     s.readback = None
-    total = sum(int(t.fields["amount"].value) for t in s.txns if isinstance(t.fields["amount"].value, int))
-    _speak(s, acts, "REVIEW", n=len(s.txns), total=N.format_inr(total))
+    _update(s, acts)
+    _speak(s, acts, "STORY_CHECK", facts=_facts(s, [(n, w, f) for n, _, w, f in items]))
+
+
+def _story_answer(s: Session, acts: list[Action], yes: bool) -> None:
+    s.unknown_streak = 0
+    if not yes:
+        _speak(s, acts, "STORY_ONE_BY_ONE")
+        _advance(s, acts)  # each pending value is read back on its own, so the caller can fix the wrong one
+        return
+    for name, _, _, f in story_items(s):
+        f.status = "confirmed"
+        if name == "amount" and isinstance(f.value, int) and V.validate_amount(f.value).extra_confirm:
+            _speak(s, acts, "HIGH_AMOUNT")
+        if name == "datetime" and isinstance(f.value, str):
+            dt = sms_datetime(f.value)
+            if dt and V.validate_datetime(dt).warn:
+                f.warn = "older_than_7_days"
+                _speak(s, acts, "OLD_DATE")
+    _advance(s, acts)
 
 
 def _new_txn(s: Session, acts: list[Action]) -> None:
@@ -383,12 +458,19 @@ def _typed_text(field: str, raw: str) -> tuple[bool, str | None, str | None]:
 
 
 def _wrong_len_prompt(s: Session, acts: list[Action], field: str, reason: str) -> bool:
+    if reason == "phone_prefix":  # ten digits, but no Indian mobile starts with 0-5
+        _speak(s, acts, "BAD_PHONE")
+        return True
     m = re.match(r"(utr|phone)_len_(\d+)", reason)
     if not m or m.group(2) == "0":
         return False
     pid = "WRONG_LEN_utr" if field == "utr" else "WRONG_LEN_phone"
     _speak(s, acts, pid, n=int(m.group(2)))
     return True
+
+
+def is_asked(s: Session, field: str, txn: int | None) -> bool:
+    return s.current_field == field and (field not in TXN_FIELDS or txn == s.current_txn)
 
 
 def _dup_utr_of(s: Session, utr: str, txn: int | None) -> bool:
@@ -419,6 +501,11 @@ def _gap_answer(s: Session, acts: list[Action], text: str, literal: str | None) 
         _ask_again(s, acts)
         return
     p = _parse_field(field, text, literal)
+    if p.value is None and field in DIGIT_FIELDS and p.reason in ("unparsed", "utr_len_0", "phone_len_0"):
+        # No number in what was heard (noise, "hmm"): this question is answered on the keypad, so explain how
+        # rather than count a failed answer.
+        _speak(s, acts, "USE_NUMPAD")
+        return
     if p.value is not None:
         if field == "utr" and _dup_utr_of(s, str(p.value), txn):
             s.state = "DUP_CHECK"
@@ -432,11 +519,12 @@ def _gap_answer(s: Session, acts: list[Action], text: str, literal: str | None) 
     if not _repair(s, field, txn):
         _give_up(s, acts, field, txn)
         return
-    if p.reason == "future" or not _wrong_len_prompt(s, acts, field, p.reason):
-        _speak(s, acts, "DIDNT_CATCH")
-    if field in DIGIT_FIELDS:
-        s.show_numpad = True
-        acts.append(Action(type="ShowNumpad", data={"field": field, "txn_index": txn}))
+    if field == "amount":
+        _speak(s, acts, "TYPE_amount")  # an amount the AI cannot understand is typed instead
+        return
+    if field in DIGIT_FIELDS and _wrong_len_prompt(s, acts, field, p.reason):
+        return  # that prompt already says how to type it again
+    _speak(s, acts, "DIDNT_CATCH")
     _ask_again(s, acts)
 
 
@@ -691,9 +779,7 @@ def _narrative(s: Session, acts: list[Action], ev: Event) -> None:
     if s.fields["fraud_type"].value is None:
         _set(s.fields["fraud_type"], "OTHER", status="confirmed", source="rules")
     s.txn_cursor = 0
-    if s.channel == "phone":
-        _speak(s, acts, "KEYS")  # kept out of the opening so that stays short
-    _advance(s, acts)
+    _story_check(s, acts)
 
 
 def _sms_target(s: Session, amount: object) -> int | None:
@@ -757,6 +843,9 @@ def _apply_sms(s: Session, acts: list[Action], text: str) -> None:
     _speak(s, acts, "SMS_THANKS")
     if s.state == "NARRATIVE":
         return  # still waiting for the story
+    if s.state == "STORY_CHECK":
+        _story_check(s, acts)
+        return
     cur = s.current_field
     cur_settled = cur is not None and s.field(cur, s.current_txn).settled
     if s.state in ("ASK_MORE_TXN", "REVIEW") and added:
@@ -794,20 +883,25 @@ def _numpad(s: Session, acts: list[Action], ev: Event) -> None:
         rb.chunks[rb.index] = digits
         digits = "".join(rb.chunks)
     precision = None
+    reason = ""
     if name == "amount":
         v_amt = V.validate_amount(int(digits) if digits else None)
         ok, value = v_amt.ok, v_amt.value
     elif name == "utr":
         v = V.validate_utr(digits)
-        ok, value = v.ok, v.value
+        ok, value, reason = v.ok, v.value, v.reason
     elif name in ("suspect_phone", "victim_mobile"):
         v = V.validate_phone(digits)
-        ok, value = v.ok, v.value
+        ok, value, reason = v.ok, v.value, v.reason
     else:
         ok, value, precision = _typed_text(name, ev.digits or "")
     if not ok:
         acts.append(Action(type="ShowNumpad", data={"field": name, "txn_index": txn, "error": "invalid"}))
-        _speak(s, acts, "DIDNT_CATCH")
+        if is_asked(s, name, txn) and not _repair(s, name, txn):
+            _give_up(s, acts, name, txn)  # typed wrong again and again: an officer checks it, the call goes on
+            return
+        if not _wrong_len_prompt(s, acts, name, reason):
+            _speak(s, acts, "USE_NUMPAD" if name in DIGIT_FIELDS or name == "amount" else "DIDNT_CATCH")
         return
     if name == "utr" and _dup_utr_of(s, str(value), txn):
         s.state = "DUP_CHECK"
@@ -872,8 +966,15 @@ def _button(s: Session, acts: list[Action], ev: Event) -> None:
         else:
             _speak(s, acts, "REVIEW_FIX")
         return
+    if ev.field == "story" and s.state == "STORY_CHECK":
+        _story_answer(s, acts, yes)
+        return
     if ev.field == "dup_utr" and s.state == "DUP_CHECK":
         _dup_answer(s, acts, yes)
+        return
+    if not yes and s.state == "GAP_FILL" and ev.field == s.current_field and ev.field in KEYPAD_FIELDS:
+        # 2 on a number question means "I don't know it"
+        _skip(s, acts, Event(type="SKIP", field=ev.field, txn_index=s.current_txn))
         return
     if ev.field == "called_bank" and s.state == "GAP_FILL" and s.current_field == "called_bank":
         _set(s.fields["called_bank"], "yes" if yes else "no", status="confirmed", source="button",
@@ -922,6 +1023,8 @@ def _reask(s: Session, acts: list[Action]) -> None:
         _speak(s, acts, "ASK_MORE_TXN")
     elif s.state == "DUP_CHECK":
         _speak(s, acts, "DUP_UTR")
+    elif s.state == "STORY_CHECK":
+        _story_check(s, acts)
     elif s.state == "REVIEW":
         _review(s, acts)
 
@@ -1026,6 +1129,15 @@ def _step(session: Session, ev: Event) -> tuple[Session, list[Action]]:
 
     if s.state in ("NARRATIVE", "OPENING", "CONSENT"):
         _narrative(s, acts, ev)
+    elif s.state == "STORY_CHECK":
+        yn = yesno.classify(text).intent
+        if yn == "REPEAT":
+            _story_check(s, acts)
+        elif yn in ("YES", "NO", "CORRECTION"):
+            _story_answer(s, acts, yn == "YES")
+        elif not _not_understood(s, acts):
+            _speak(s, acts, "CONFIRM_HINT")
+            _story_check(s, acts)
     elif s.state == "GAP_FILL":
         _gap_answer(s, acts, text, ev.literal)
     elif s.state == "READBACK":

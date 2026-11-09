@@ -1,14 +1,16 @@
-# CyberMitra TN
+# CyberDesk TN
 
 An **AI-first voice intake agent for Tamil Nadu's 1930 cyber-fraud helpline overflow**.
 
-1. A victim speaks Tamil, Tanglish or English on the caller page (a phone browser).
+1. A victim "dials 1930" on the caller page (a phone-call screen in a phone browser) and speaks Tamil,
+   Tanglish or English. The AI answers the call.
 2. The AI handles the whole call: it takes the story, captures **every transaction** (amount, time, UTR),
    the victim's bank and the suspect's details. **Gnani Prisma** transcribes; every number is converted
-   **deterministically in code**; digits are read back in chunks with **Gnani Timbre**; the caller corrects
-   them by voice, ✓/✗ buttons, a keypad, or by pasting the bank SMS.
-3. It closes with next-steps guidance in the caller's language and a summary with a draft reference
-   (`CM-DRAFT-xxxx`, never presented as an NCRP acknowledgement).
+   **deterministically in code**; digits are read back in chunks with **Gnani Timbre**; the caller answers
+   and corrects on the phone keypad or by voice.
+3. It closes with a short spoken summary, says the reference and next steps come by SMS, and hangs up. The
+   "SMS" is the summary card on the caller page in this demo (labelled simulated), with a draft reference
+   (`CD-DRAFT-xxxx`, never presented as an NCRP acknowledgement).
 4. It pushes a **Complaint Packet** (CFCFRMS field order) to an **operator review queue** on a second device.
    The operator reviews, edits if needed, and approves, instead of typing the complaint from scratch.
 5. A call goes to a person only when the caller asks, the AI cannot understand, or the case is non-financial
@@ -64,6 +66,28 @@ python scripts/probe_prisma_formats.py --clips 8
 python scripts/prerender_prompts.py
 ```
 
+## How a call goes
+
+1. **Opening:** "Welcome to the 1930 cyber crime helpline. I am CyberDesk, the AI assistant." Then the keys:
+   **1** yes, **2** no, **3** if you did not understand (hear it again), and to type a number **`*`**, the number,
+   then **`#`**. Then one question for the whole story: what happened, when, how much, how it was paid
+   (UPI / card / net banking) and from which bank, all in one go.
+2. **One check:** "Let me check: fifty thousand rupees, yesterday 3 PM, by UPI, from your SBI account. Is that
+   right?" **1** confirms all of it; **2** checks each value on its own so the wrong one can be fixed.
+3. **Only what is missing** is asked next, by voice. An amount the AI cannot understand is typed instead.
+4. **Numbers are typed, last:** the UTR, the fraudster's number, then the caller's own mobile. Each question
+   says "press star, type it, then press hash" at that moment; typing starts only on `*`, so until then
+   **2** means "I don't know it" and **3** repeats. The line does not listen during these questions, so room noise
+   cannot answer them. A wrong length or a mobile that does not start with 6–9 is explained ("A mobile number
+   starts with 6, 7, 8 or 9"); after repeated wrong entries the field is marked for the officer to verify and the
+   call moves on.
+5. **End:** "Thank you. I have noted … An officer will review your complaint. We will send you an SMS with
+   your reference number and next steps. Goodbye." The call then hangs up by itself.
+
+Pace: prompts at Timbre speed 1.15, read-backs at 1.0, and the caller page plays audio at 1.3x (pitch kept), about
+1.5x the old speed for prompts. A pause of 1.2 s ends an answer (2 s during the story). End call on the page
+counts as hanging up: a call with anything in it still reaches an officer (`caller_hung_up`).
+
 ## Experimental telephony (off by default)
 
 Call a real number and talk to the same agent. Calls go through the same FSM, queue and operator review, and appear
@@ -72,11 +96,20 @@ as `experimental telephony`. It needs a Twilio number and a public HTTPS URL.
 1. Run `ngrok http 8080`.
 2. In `.env`, set `TWILIO_ENABLED=true`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_PUBLIC_URL=https://<your-ngrok-host>`, then start the server.
 3. In the Twilio console, under your number's voice settings, set "A call comes in" to Webhook, HTTP POST, `https://<your-ngrok-host>/api/twilio/voice`.
-4. Call the number. Keys: **1** yes, **2** no, **3** repeat, **0** officer, `*` to type a number, then `#` to finish.
+4. Call the number. Keys: **1** yes, **2** no (or "don't know" on a number question), **3** repeat, **0** officer,
+   `*` to type a number, then `#` to finish.
 
 Limits: half duplex (you are heard only after the AI finishes speaking; a key interrupts it), turns end after 1.2 s of
-quiet, one language per server (`TWILIO_LANG`), no SMS paste, and no real transfer to a person. A free ngrok URL
-changes each run, which means updating `.env` and the Twilio console.
+quiet, one language per server (`TWILIO_LANG`), no SMS paste, no SMS sent (the AI says so and reads the reference),
+prompts at Timbre's 1.15 only (the page's extra 1.3x playback is not applied to phone audio), and no real transfer
+to a person. A free ngrok URL changes each run, which means updating `.env` and the Twilio console.
+
+**Free ways to try it on a real phone.** A Twilio trial is free but calls only numbers you verify (your own mobile)
+and plays a short trial notice. Calling a US Twilio number from an Indian mobile is an international call on your
+own bill, so the free route is the other direction: Twilio calls your verified mobile and the call connects to this
+same stream (needs a small "call me" endpoint, not built yet). Exotel (Indian numbers) has a trial with free credits
+and whitelisted numbers, but going live needs KYC and its streaming format would need its own adapter. Plivo has
+trial credits and a similar stream API. The caller page in a phone browser remains the zero-cost option.
 
 ## Tests and quality
 
@@ -109,10 +142,11 @@ Caller (`app/api/routes_caller.py`):
 | `POST /api/session` | `{lang, consent}` → opening prompt |
 | `POST /api/session/{id}/turn` | multipart `audio` (up to `MAX_TURN_S`; split into pieces for Prisma) |
 | `POST /api/session/{id}/sms` | pasted bank SMS, one or several (0 API calls) |
-| `POST /api/session/{id}/confirm` | ✓/✗ for a read-back chunk, or for `more_txn` / `review` / `dup_utr` / `called_bank` |
+| `POST /api/session/{id}/confirm` | key 1/2 for a read-back chunk, the story check (`story`), `more_txn` / `dup_utr` / `called_bank`, or "don't know" (`no`) on a number question |
 | `POST /api/session/{id}/numpad` | typed value (authoritative), `{field, txn_index?, digits}` |
 | `POST /api/session/{id}/skip` | skip a field (or `more_txn`) |
 | `POST /api/session/{id}/human` | "Talk to a person": warm handoff |
+| `POST /api/session/{id}/hangup` | End call: after anything was said, a warm handoff (`caller_hung_up`); otherwise the call is dropped |
 | `GET /api/session/{id}/summary` | Victim Summary + next steps |
 | `DELETE /api/session/{id}` | wipe |
 | `GET /api/audio/{sha}.wav` | TTS audio |
@@ -254,6 +288,9 @@ not as a post-read-back accuracy figure.
 - Next-steps lines are tagged "draft guidance" until each has an official source in
   [docs/NEXT_STEPS_SOURCES.md](docs/NEXT_STEPS_SOURCES.md).
 - Queue and sessions are in memory: a restart empties them (by design, no database).
+- No SMS is sent. On the caller page the end summary stands in for it (labelled simulated); the phone path says so.
+- The opening is now longer than the 15 s first measured (it carries the keys and the whole-story question); its
+  duration at the new speed has not been re-measured with Timbre.
 - Tele-MANAS (14416) and the other helpline numbers must be re-verified from official sources before submission.
 
 ## Safety and privacy

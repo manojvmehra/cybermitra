@@ -97,8 +97,22 @@ def expected_txn_count(text: str) -> int | None:
     return best
 
 
+def _drop_negated_payment_words(text_norm: str) -> str:
+    words = re.sub(r"[,.;:!?]", " ", text_norm).split()
+    kept = []
+    for i, w in enumerate(words):
+        after = words[i + 1] if i + 1 < len(words) else ""
+        before = words[i - 1] if i else ""
+        before2 = words[i - 2] if i > 1 else ""
+        ruled_out = (after in L.PAYMENT_NEGATED_AFTER or before in L.PAYMENT_NEGATED_BEFORE
+                     or (before in L.PAYMENT_NEGATION_LINKS and before2 in L.PAYMENT_NEGATED_BEFORE))
+        if not ruled_out:
+            kept.append(w)
+    return " ".join(kept)
+
+
 def find_payment_mode(text: str) -> str | None:
-    t = N.normalise_text(text)
+    t = _drop_negated_payment_words(N.normalise_text(text))
     for mode, cues in L.PAYMENT_MODES.items():
         if any(_contains(t, c) for c in cues):
             return mode

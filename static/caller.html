@@ -2,370 +2,362 @@
 <html lang="ta" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CyberMitra</title>
-<script>try{const t=localStorage.getItem("cybermitra-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CyberDesk</title>
+<script>try{const t=localStorage.getItem("cyberdesk-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* Colours that do not change with the theme, and the channels used to build translucent ones */
+  /* Colours that do not change with the theme */
   :root { --r-card:16px; --r-btn:12px; --ease:.2s ease;
-    --purple:#7C3AED; --blue:#3B82F6; --brand:linear-gradient(135deg, var(--purple), var(--blue)); --on-brand:#FFFFFF;
-    --page-light:linear-gradient(180deg, #FFFFFF, #F5F5F7); --page-dark:radial-gradient(60% 45% at 50% 0%, rgba(var(--rgb-purple),.24), transparent 70%), radial-gradient(45% 40% at 95% 100%, rgba(var(--rgb-blue),.14), transparent 70%), linear-gradient(160deg, #0D0B1A, #1A1333);
-    --red:#EF4444; --red-hover:#DC2626; --ok:#22C55E; --ok-hover:#16A34A; --on-ok:#06240F; --toast-bg:rgba(127,29,29,.94);
-    --rgb-purple:124,58,237; --rgb-blue:59,130,246; --rgb-sky:96,165,250; --rgb-lilac:167,139,250; --rgb-indigo:99,102,241;
-    --rgb-green:34,197,94; --rgb-red:239,68,68; --rgb-amber:251,191,36; --rgb-pink:236,72,153; --rgb-rose:244,114,182; --rgb-black:0,0,0; }
+    --purple:var(--accent); --blue:var(--accent); --brand:var(--accent); --on-brand:#FFFFFF; --on-accent:#FFFFFF;
+    --page-light:#F8F9FB; --page-dark:#0A0A14;
+    --green:#4ADE80; --green-hover:#22C55E; --red:#EF4444; --red-hover:#DC2626; --ok:#4ADE80; --ok-hover:#22C55E; --on-ok:#0A0A14; --toast-bg:#7F1D1D;
+    --rgb-purple:74,158,255; --rgb-lilac:74,158,255; --rgb-indigo:74,158,255; --rgb-blue:74,158,255; --rgb-sky:107,181,255;
+    --rgb-amber:245,166,35; --rgb-pink:239,68,68; --rgb-rose:239,68,68; --rgb-green:74,222,128; --rgb-red:239,68,68; --rgb-black:0,0,0; }
 
   /* Light theme */
-  :root { color-scheme:light; --dark-layer:0; --bg-a:#F5F5F7; --fg:#1A1A2E; --muted:#6B7280; --body:#374151; --faint:#6B7280; --placeholder:#9CA3AF;
-    --glass:#FFFFFF; --glass-hi:#F3F4F6; --line:#E5E7EB; --line-hi:rgba(var(--rgb-purple),.45); --item-bg:#FFFFFF; --subcard-bg:#FAFAFB; --input-bg:#F9FAFB;
-    --nav-bg:#FFFFFF; --dock-bg:#FFFFFF; --decide-bg:#FFFFFF;
-    --key-bg:#E5E7EB; --key-hover:#D1D5DB; --key-line:#D1D5DB; --key-fg:#1A1A2E; --key-label:#4B5563;
-    --msg-ai-bg:#EDE9FE; --msg-ai-line:#DDD6FE; --msg-ai-fg:#1A1A2E; --msg-you-bg:#DBEAFE; --msg-you-line:#BFDBFE; --msg-you-fg:#1A1A2E;
-    --msg-cur-bg:#EDE9FE; --msg-cur-fg:#1A1A2E; --msg-cur-line:var(--purple); --msg-cur-glow:0 0 0 3px rgba(var(--rgb-purple),.14);
-    --violet:#6D28D9; --wave:#7C3AED; --warn:#92400E; --alert:#B91C1C; --ok-text:#15803D; --chip-claimed:#1D4ED8; --chip-approved:#15803D; --chip-reason:#BE185D; --dot-off:#9CA3AF;
-    --hero-text:linear-gradient(90deg, #6D28D9, #2563EB); --off-filter:saturate(.55) opacity(.6);
-    --shadow:0 1px 3px rgba(var(--rgb-black),.06), 0 6px 16px rgba(var(--rgb-black),.05);
-    --glow:0 6px 20px rgba(var(--rgb-purple),.26); --glow-hi:0 8px 28px rgba(var(--rgb-indigo),.34); --pink:#EC4899; }
+  :root { color-scheme:light; --dark-layer:0; --accent:#2563EB; --accent-2:#3B82F6;
+    --bg-a:#F8F9FB; --fg:#111827; --muted:#6B7280; --body:#374151; --faint:#6B7280; --placeholder:#6B7280; --label:#6B7280;
+    --glass:#FFFFFF; --glass-hi:#F3F4F6; --line:#E8EBF0; --line-hi:#2563EB; --btn-bg:#FFFFFF; --btn-line:#D9DEE7; --row-line:#E8EBF0; --row-hover:#F3F4F6;
+    --inset:#F8F9FB; --item-bg:#FFFFFF; --subcard-bg:#F8F9FB; --input-bg:#FFFFFF; --input-line:#D9DEE7;
+    --nav-bg:#FFFFFF; --decide-bg:#FFFFFF; --header-bg:#FFFFFF; --header-line:#E8EBF0;
+    --bubble:#F3F4F6; --bubble-you:#EFF6FF; --bubble-cur:#F3F4F6; --cap-ai:#111827; --cap-you:#111827; --cap-old:#374151;
+    --key-bg:#F3F4F6; --key-hover:#E8EBF0; --key-fg:#111827; --key-line:#E8EBF0;
+    --violet:#2563EB; --warn:#B45309; --alert:#B91C1C; --ok-text:#15803D; --chip-claimed:#1D4ED8; --chip-approved:#15803D; --chip-reason:#B91C1C; --dot-off:#9CA3AF; --pink:#EF4444;
+    --decide-off:saturate(.45) opacity(.45);
+    --shadow:0 1px 3px rgba(0,0,0,.04); --glow:none; --glow-hi:none; --blur:none; }
   /* Dark theme */
-  [data-theme="dark"] { color-scheme:dark; --dark-layer:1; --bg-a:#0D0B1A; --bg-b:#1A1333; --fg:#FFFFFF; --muted:#A0A0B8; --body:#D9D9E6; --faint:#7B7B94; --placeholder:#7B7B94;
-    --glass:rgba(255,255,255,.055); --glass-hi:rgba(255,255,255,.1); --line:rgba(255,255,255,.1); --line-hi:rgba(var(--rgb-lilac),.55); --item-bg:rgba(255,255,255,.025); --subcard-bg:rgba(255,255,255,.03); --input-bg:rgba(var(--rgb-black),.28);
-    --nav-bg:rgba(13,11,26,.66); --dock-bg:rgba(13,11,26,.86); --decide-bg:rgba(22,17,44,.97);
-    --key-bg:var(--glass); --key-hover:var(--glass-hi); --key-line:var(--line); --key-fg:#FFFFFF; --key-label:#A0A0B8;
-    --msg-ai-bg:rgba(var(--rgb-purple),.24); --msg-ai-line:rgba(var(--rgb-lilac),.28); --msg-ai-fg:#EEE9FF; --msg-you-bg:rgba(var(--rgb-blue),.3); --msg-you-line:rgba(var(--rgb-sky),.35); --msg-you-fg:#FFFFFF;
-    --msg-cur-bg:rgba(var(--rgb-purple),.34); --msg-cur-fg:#FFFFFF; --msg-cur-line:#A78BFA; --msg-cur-glow:0 0 18px rgba(var(--rgb-purple),.38);
-    --violet:#A78BFA; --wave:#A78BFA; --warn:#FBBF24; --alert:#FCA5A5; --ok-text:#22C55E; --chip-claimed:#93C5FD; --chip-approved:#86EFAC; --chip-reason:#FBCFE8; --dot-off:#5B5B72;
-    --hero-text:linear-gradient(90deg, #C4B5FD, #93C5FD); --off-filter:saturate(.45) brightness(.72);
-    --shadow:0 8px 28px rgba(var(--rgb-black),.3);
-    --glow:0 8px 32px rgba(var(--rgb-purple),.35); --glow-hi:0 10px 44px rgba(var(--rgb-indigo),.55); --pink:#EC4899; }
+  [data-theme="dark"] { color-scheme:dark; --dark-layer:1; --accent:#4A9EFF; --accent-2:#6BB5FF;
+    --bg-a:#0A0A14; --fg:#FFFFFF; --muted:rgba(255,255,255,.5); --body:rgba(255,255,255,.85); --faint:rgba(255,255,255,.25); --placeholder:rgba(255,255,255,.4); --label:rgba(255,255,255,.4);
+    --glass:rgba(255,255,255,.03); --glass-hi:rgba(255,255,255,.06); --line:rgba(255,255,255,.07); --line-hi:#4A9EFF; --btn-bg:rgba(255,255,255,.05); --btn-line:rgba(255,255,255,.1); --row-line:rgba(255,255,255,.05); --row-hover:rgba(255,255,255,.03);
+    --inset:rgba(255,255,255,.03); --item-bg:rgba(255,255,255,.03); --subcard-bg:rgba(255,255,255,.03); --input-bg:rgba(255,255,255,.03); --input-line:rgba(255,255,255,.08);
+    --nav-bg:rgba(10,10,20,.8); --decide-bg:rgba(16,16,28,.96); --header-bg:rgba(10,10,20,.8); --header-line:rgba(255,255,255,.06);
+    --bubble:rgba(255,255,255,.05); --bubble-you:rgba(74,158,255,.14); --bubble-cur:rgba(255,255,255,.07); --cap-ai:#FFFFFF; --cap-you:#FFFFFF; --cap-old:rgba(255,255,255,.75);
+    --key-bg:rgba(255,255,255,.05); --key-hover:rgba(255,255,255,.1); --key-fg:#FFFFFF; --key-line:rgba(255,255,255,.08);
+    --violet:#4A9EFF; --warn:#F5A623; --alert:#FCA5A5; --ok-text:#4ADE80; --chip-claimed:#6BB5FF; --chip-approved:#4ADE80; --chip-reason:#FCA5A5; --dot-off:rgba(255,255,255,.3); --pink:#EF4444;
+    --decide-off:saturate(.35) brightness(.5);
+    --shadow:none; --glow:none; --glow-hi:none; --blur:blur(12px); }
 
-  /* Switching themes: a short-lived class, so the page's own 0.2s hover transitions are untouched the rest of the time */
   @media (prefers-reduced-motion: no-preference) {
     html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition:background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease !important; }
   }
-  #themeToggle { flex:none; display:grid; place-items:center; width:32px; height:32px; min-height:0; padding:0; border-radius:10px; }
-  #themeToggle svg { width:17px; height:17px; }
-  [data-theme="dark"] .icon-moon, :root:not([data-theme="dark"]) .icon-sun { display:none; }
   * { box-sizing:border-box; }
   html { background:var(--bg-a); }
   body { margin:0; min-height:100vh; min-height:100dvh; background:transparent; color:var(--body); font:16px/1.5 Inter, "Noto Sans Tamil", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing:antialiased; }
   body::before { content:""; position:fixed; inset:0; z-index:-2; background:var(--page-light); }
   body::after { content:""; position:fixed; inset:0; z-index:-1; opacity:var(--dark-layer); transition:opacity .3s ease; background:var(--page-dark); }
   a { color:var(--violet); }
-  h2 { font-size:12.5px; margin:0 0 8px; color:var(--muted); font-weight:600; letter-spacing:.04em; }
-  h3 { font-size:14px; margin:10px 0 4px; font-weight:600; color:var(--fg); }
-  ol { padding-left:20px; margin:6px 0; } li { margin:6px 0; }
+  h2 { font-size:11px; line-height:1.4; margin:0 0 16px; color:var(--muted); font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+  ol { padding-left:20px; margin:0; } li { margin:8px 0; } li:first-child { margin-top:0; }
   .hidden { display:none !important; }
+  button { font:inherit; font-weight:600; border-radius:var(--r-btn); border:1px solid var(--line); background:var(--glass); color:var(--fg); padding:8px 16px; min-height:44px; cursor:pointer; touch-action:manipulation; transition:background var(--ease), border-color var(--ease), box-shadow var(--ease), transform var(--ease), opacity var(--ease); }
+  button:hover { background:var(--glass-hi); }
+  button:active { transform:scale(.95); }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline:2px solid var(--violet); outline-offset:2px; }
+  button.primary { background:var(--brand); border-color:transparent; color:var(--on-brand); }
 
-  button { font:inherit; font-weight:600; border-radius:var(--r-btn); border:1px solid var(--line); background:var(--glass); color:var(--fg); padding:12px 16px; min-height:44px; cursor:pointer; transition:background var(--ease), border-color var(--ease), box-shadow var(--ease), transform var(--ease), opacity var(--ease); }
-  button:hover { background:var(--glass-hi); border-color:var(--line-hi); }
-  button:active { transform:scale(.97); }
-  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline:2px solid var(--violet); outline-offset:2px; }
-  button.primary { background:var(--brand); border-color:transparent; color:var(--on-brand); box-shadow:0 6px 22px rgba(var(--rgb-purple),.3); }
-  button.primary:hover { box-shadow:var(--glow-hi); }
-  button:disabled { opacity:.5; cursor:default; }
-  textarea, input[type=text] { width:100%; font:inherit; color:var(--fg); padding:12px; border-radius:var(--r-btn); border:1px solid var(--line); background:var(--input-bg); transition:border-color var(--ease), box-shadow var(--ease); }
-  textarea:focus, input[type=text]:focus { border-color:var(--line-hi); box-shadow:0 0 0 3px rgba(var(--rgb-purple),.2); outline:none; }
-  textarea { min-height:90px; resize:vertical; margin-top:2px; }
-  ::placeholder { color:var(--placeholder); }
+  /* page: 8 / 16 / 24 spacing scale */
+  #phone { max-width:480px; margin:0 auto; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; padding:0 16px env(safe-area-inset-bottom, 0px); }
+  body.on-call #phone { max-width:1280px; }
+  .topbar { display:flex; align-items:center; gap:8px; padding:16px 0; font-size:13px; color:var(--muted); }
+  .topbar .app { font-size:18px; font-weight:700; letter-spacing:-.02em; color:var(--fg); }
+  .badge { font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:999px; color:var(--warn); background:rgba(var(--rgb-amber),.12); border:1px solid rgba(var(--rgb-amber),.35); }
+  #themeToggle { margin-left:auto; display:grid; place-items:center; width:36px; height:36px; min-height:0; padding:0; border-radius:var(--r-btn); }
+  #themeToggle svg { width:18px; height:18px; }
+  [data-theme="dark"] .icon-moon, :root:not([data-theme="dark"]) .icon-sun { display:none; }
+  .banner { text-align:center; font-size:12px; color:var(--warn); margin:0 0 16px; }
 
-  /* nav */
-  header { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; padding:10px max(16px, calc((100% - 1280px) / 2)); background:var(--nav-bg); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border-bottom:1px solid var(--line); }
-  header h1 { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; color:var(--fg); }
-  .logo { flex:none; display:block; width:32px; height:32px; }
-  .badge { font-size:11.5px; font-weight:600; letter-spacing:.03em; padding:2px 9px; border-radius:999px; color:var(--warn); background:rgba(var(--rgb-amber),.12); border:1px solid rgba(var(--rgb-amber),.35); }
-  .nav-right { margin-left:auto; display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:600; color:var(--muted); }
-  .status { display:inline-flex; align-items:center; gap:7px; font-variant-numeric:tabular-nums; color:var(--fg); }
-  .status i { width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse 1.6s ease-in-out infinite; }
-  .status.ended i { background:var(--muted); box-shadow:none; animation:none; }
-  .banner { margin:0 auto; max-width:1280px; padding:6px 16px 0; text-align:center; font-size:12.5px; color:var(--warn); }
+  /* cards */
+  .card { background:var(--glass); border:1px solid var(--line); border-radius:var(--r-card); padding:24px; box-shadow:var(--shadow); animation:rise .28s ease both; min-width:0; }
 
-  main { max-width:1280px; margin:0 auto; padding:14px 16px 0; }
-  .card, details.card { background:var(--glass); border:1px solid var(--line); border-radius:var(--r-card); padding:16px; box-shadow:var(--shadow); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); animation:rise .28s ease both; }
+  /* who is on the line */
+  .who { display:flex; align-items:center; gap:16px; }
+  .who-text { min-width:0; }
+  .avatar { flex:none; display:grid; place-items:center; width:64px; height:64px; border-radius:50%; background:var(--brand); color:var(--on-brand); font-size:18px; font-weight:800; letter-spacing:.02em; box-shadow:var(--glow); }
+  .avatar.live { animation:breathe 2.4s ease-in-out infinite; }
+  .name { margin:0; font-size:22px; font-weight:700; line-height:1.25; color:var(--fg); letter-spacing:-.02em; }
+  .name-ta { margin:0; font-size:14px; color:var(--muted); }
+  #callState { margin:0; font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; min-height:1.5em; }
+  #callState i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; vertical-align:1px; background:var(--muted); }
+  #callState.listening i { background:var(--green); box-shadow:none; animation:pulse 1.2s ease-in-out infinite; }
+  #callState.speaking i { background:var(--violet); }
 
-  /* start screen */
-  #start { animation:rise .3s ease both; }
-  .hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:6vh 4px 22px; }
-  .hero-title { margin:0; font-size:clamp(36px, 8vw, 60px); line-height:1.08; font-weight:800; letter-spacing:-.035em; color:var(--fg); }
-  .hero-ta { margin:10px 0 0; font-size:clamp(19px, 4.4vw, 28px); font-weight:600; background:var(--hero-text); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .tagline { margin:12px 0 26px; color:var(--muted); font-size:16px; }
-  #startCall { width:100%; max-width:340px; padding:18px 24px; border-radius:18px; border:0; background:var(--brand); color:var(--on-brand); box-shadow:var(--glow); display:flex; flex-direction:column; align-items:center; gap:2px; animation:breathe 3s ease-in-out infinite; }
-  #startCall:hover { box-shadow:var(--glow-hi); transform:translateY(-2px); }
-  #startCall b { display:inline-flex; align-items:center; gap:10px; font-size:23px; font-weight:700; letter-spacing:-.01em; }
-  #startCall b svg { width:24px; height:24px; }
-  #startCall small { font-size:14px; font-weight:500; opacity:.92; }
-  #startCall.off { filter:var(--off-filter); box-shadow:none; animation:none; }
-  #startCall.loading { pointer-events:none; animation:none; }
-  #startCall .spinner { display:none; }
-  #startCall.loading .spinner { display:inline-block; }
-  #startCall.loading svg { display:none; }
-  #startErr { color:var(--alert); margin:12px 0 0; }
-  .langs { display:inline-flex; gap:4px; padding:4px; margin-top:18px; background:var(--glass); border:1px solid var(--line); border-radius:var(--r-btn); }
+  /* dialler (before the call) */
+  #dialer { flex:1; display:flex; flex-direction:column; align-items:center; }
+  .number { margin:6vh 0 0; font-size:64px; font-weight:800; line-height:1.1; letter-spacing:.02em; color:var(--fg); font-variant-numeric:tabular-nums; }
+  #dialer .name-ta { margin:8px 0 0 !important; text-align:center; }
+  .langs { display:inline-flex; gap:8px; padding:8px; margin-top:24px; background:var(--glass); border:1px solid var(--line); border-radius:var(--r-btn); box-shadow:var(--shadow); }
   .langs label { position:relative; cursor:pointer; }
   .langs input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
-  .langs span { display:block; padding:7px 20px; border-radius:9px; font-weight:600; font-size:15px; color:var(--muted); transition:background var(--ease), color var(--ease); }
+  .langs span { display:block; padding:8px 24px; border-radius:8px; font-weight:600; font-size:15px; color:var(--muted); transition:background var(--ease), color var(--ease); }
   .langs input:checked + span { background:var(--brand); color:var(--on-brand); }
   .langs input:focus-visible + span { outline:2px solid var(--violet); }
-  #consentCard { max-width:640px; margin:0 auto; font-size:13.5px; }
-  #consentCard p { margin:0 0 10px; }
-  #consentCard b { color:var(--fg); }
+  #consentCard { margin:24px 0 0; padding:24px; font-size:14px; background:var(--glass); border:1px solid var(--line); border-radius:var(--r-card); box-shadow:var(--shadow); }
+  #consentCard p { margin:0 0 16px; }
   #consentCard.nudge { border-color:var(--violet); animation:nudge .35s ease-in-out 2; }
-  .agree { display:flex; gap:10px; align-items:flex-start; color:var(--fg); font-size:15px; font-weight:600; cursor:pointer; }
+  .agree { display:flex; gap:8px; align-items:flex-start; color:var(--fg); font-size:15px; font-weight:600; cursor:pointer; }
   .agree input { width:20px; height:20px; margin:2px 0 0; accent-color:var(--purple); flex:none; }
+  .round { display:grid; place-items:center; width:64px; height:64px; min-height:0; padding:0; border-radius:50%; border:0; color:#FFFFFF; }
+  .round svg { width:28px; height:28px; }
+  .round.green { background:var(--green); box-shadow:none; }
+  .round.green:hover { background:var(--green-hover); }
+  .round.red { background:var(--red); box-shadow:none; }
+  .round.red:hover { background:var(--red-hover); }
+  .round.red svg { transform:rotate(135deg); }
+  #startCall { margin:0; }
+  #startCall.off { filter:saturate(.4) opacity(.6); box-shadow:none; }
+  #startCall.loading { pointer-events:none; animation:breathe 1s ease-in-out infinite; }
+  .under { margin:8px 0 0; font-size:13px; color:var(--muted); text-align:center; }
+  #startErr { color:var(--alert); margin:8px 0 0; text-align:center; }
 
-  /* call screen */
-  #app { display:grid; gap:12px; grid-template-columns:minmax(0, 1fr); animation:rise .3s ease both; }
-  .col { display:flex; flex-direction:column; gap:12px; min-width:0; }
-  #busySpin { position:absolute; top:12px; right:14px; display:none; }
-  body.busy #busySpin { display:inline-block; }
-  body.busy .dial button { opacity:.62; }
-  .spinner { width:20px; height:20px; border-radius:50%; border:3px solid transparent; background:conic-gradient(from 0deg, transparent 15%, var(--purple), var(--blue)) border-box; -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 2.5px)); mask:radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 2.5px)); animation:spin .8s linear infinite; }
-  #rbDigits { font-size:clamp(30px, 5vw, 40px); font-weight:800; letter-spacing:5px; text-align:center; font-variant-numeric:tabular-nums; margin:2px 0; word-break:break-all; color:var(--fg); }
-  #rbDigits.text { font-size:24px; letter-spacing:0; }
-  #typeHint { color:var(--alert); font-size:13px; margin:6px 0 0; }
-  #typeHint:empty { display:none; }
+  /* in the call: stacked by default, two columns from 768px, bottom cards span the width */
+  #call { flex:1; display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; align-content:start; }
+  .call-left { display:flex; flex-direction:column; gap:16px; }
+  .call-right { display:flex; flex-direction:column; min-height:360px; }
+  .call-right h2 { margin-bottom:16px; }
+  .cap-wrap { position:relative; flex:1; min-height:0; }
+  #captions { position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:8px; padding-right:8px; }
+  .cap { align-self:flex-start; max-width:85%; padding:8px 16px; border-radius:var(--r-card); border-bottom-left-radius:4px; font-size:14px; line-height:1.45; color:var(--cap-old); background:var(--bubble); overflow-wrap:anywhere; animation:rise .22s ease both; }
+  .cap.you { align-self:flex-end; border-radius:var(--r-card); border-bottom-right-radius:4px; color:var(--cap-you); background:var(--bubble-you); }
+  .cap.ai.current { font-size:14px; font-weight:600; color:var(--cap-ai); background:var(--bubble-cur); }
+  #incall { display:flex; flex-direction:column; gap:16px; }
+  #screen { min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center; padding:8px 16px; border-radius:var(--r-card); background:var(--inset); border:1px solid var(--line); }
+  #screenLabel { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  #screenDigits { font-size:30px; font-weight:600; letter-spacing:.1em; color:var(--fg); font-variant-numeric:tabular-nums; word-break:break-all; line-height:1.2; }
+  #screenDigits.text { font-size:18px; letter-spacing:0; font-weight:600; word-break:normal; overflow-wrap:anywhere; }
+  #screenDigits.typing::after { content:""; display:inline-block; width:2px; height:.9em; margin-left:4px; vertical-align:-.08em; background:var(--violet); animation:blink 1s steps(1) infinite; }
+  #screenNote { font-size:13px; color:var(--muted); }
+  #screenNote.err { color:var(--alert); }
+  .dial { display:grid; grid-template-columns:repeat(3, 64px); justify-content:center; gap:12px 32px; }
+  .dial button { width:64px; height:64px; min-height:0; padding:0; border-radius:50%; border:1px solid var(--line); background:var(--key-bg); color:var(--key-fg); font-size:24px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .dial button:hover { background:var(--key-hover); }
+  .dial button:active { background:var(--key-hover); transform:scale(.93); }
+  body.busy .dial button { opacity:.6; }
+  .controls { display:grid; grid-template-columns:repeat(3, 64px); justify-content:center; align-items:start; justify-items:center; gap:32px; }
+  .ctl { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:12px; color:var(--muted); }
+  .ctl button { width:52px; height:52px; min-height:0; padding:0; border-radius:50%; display:grid; place-items:center; border:1px solid var(--line); background:var(--key-bg); color:var(--key-fg); }
+  .ctl button svg { width:22px; height:22px; }
+  .ctl button[aria-pressed="true"] { background:var(--fg); color:var(--bg-a); }
+  #endCall { width:64px; height:64px; }
 
-  /* keypad */
-  #keypadCard { padding:12px; }
-  #entry { display:none; gap:6px; align-items:center; margin-bottom:6px; }
-  #entry.on { display:flex; }
-  #numWrap { flex:1; min-width:0; }
-  #entry button { flex:none; padding:6px 14px; }
-  #numDisplay { font-size:26px; text-align:center; letter-spacing:2px; min-height:48px; padding:8px; font-variant-numeric:tabular-nums; }
-  #numCount { color:var(--muted); font-size:13px; text-align:center; min-height:1.3em; margin:2px 0 6px; }
-  .dial { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
-  .dial button { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:58px; padding:4px 2px; line-height:1.15; touch-action:manipulation; background:var(--key-bg); border-color:var(--key-line); color:var(--key-fg); }
-  .dial button:hover { background:var(--key-hover); border-color:var(--line-hi); box-shadow:0 0 18px rgba(var(--rgb-purple),.3); }
-  .dial b { font-size:23px; font-weight:700; color:var(--key-fg); font-variant-numeric:tabular-nums; }
-  .dial small { font-size:11px; font-weight:500; color:var(--key-label); }
-  .dial.yesno button[data-k="1"] { background:rgba(var(--rgb-green),.2); border-color:var(--ok); box-shadow:0 0 16px rgba(var(--rgb-green),.28); }
-  .dial.yesno button[data-k="2"] { background:rgba(var(--rgb-red),.2); border-color:var(--red); box-shadow:0 0 16px rgba(var(--rgb-red),.28); }
-  .dial.typing small { visibility:hidden; }
-  .dial.typing button[data-k="*"] small, .dial.typing button[data-k="#"] small { visibility:visible; }
-  #keyHint { min-height:1.4em; margin:8px 0 0; text-align:center; font-size:13px; color:var(--muted); }
+  /* the call is over: the keypad has gone, so centre who was on the line in the panel */
+  body.call-done .call-left { justify-content:center; }
+  body.call-done .who { flex-direction:column; text-align:center; }
 
-  /* transcript */
-  #logCard { position:relative; display:flex; flex-direction:column; height:max(calc(100vh - 560px), 240px); height:max(calc(100dvh - 560px), 240px); padding:14px; }
-  #readback, #typeBox { flex:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
-  #log { flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; overscroll-behavior:contain; padding-right:2px; }
-  .msg { max-width:88%; padding:9px 13px; border-radius:16px; font-size:14.5px; line-height:1.45; overflow-wrap:anywhere; animation:rise .22s ease both; }
-  .msg.ai { align-self:flex-start; background:var(--msg-ai-bg); border:1px solid var(--msg-ai-line); color:var(--msg-ai-fg); border-bottom-left-radius:5px; }
-  .msg.you { align-self:flex-end; background:var(--msg-you-bg); border:1px solid var(--msg-you-line); color:var(--msg-you-fg); border-bottom-right-radius:5px; }
-  .msg.ai.current { font-size:17px; font-weight:600; color:var(--msg-cur-fg); max-width:94%; border:1.5px solid var(--msg-cur-line); background:var(--msg-cur-bg); box-shadow:var(--msg-cur-glow); }
-  #transcript { color:var(--muted); font-size:18px; letter-spacing:2px; min-height:0; }
-  #transcript:not(:empty) { margin-top:6px; }
+  /* bottom section: a card grid under both panels */
+  .call-after { display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; }
+  .call-after > .card { margin:0; }
+  #handoff, #summaryBox { order:-1; }
+  .detail-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+  .dt { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px 16px; border-radius:8px; background:var(--inset); border:1px solid var(--line); min-width:0; }
+  .dt-text { min-width:0; }
+  .dt-label { display:block; font-size:12px; color:var(--muted); }
+  .dt-val { display:block; font-size:15px; font-weight:600; color:var(--fg); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .dt.empty .dt-val { color:var(--muted); font-weight:400; }
+  .dt-st { flex:none; display:grid; place-items:center; width:24px; height:24px; border-radius:50%; font-size:13px; font-weight:700; color:var(--muted); border:1px solid var(--line); }
+  .dt.confirmed .dt-st { color:var(--ok-text); border-color:rgba(var(--rgb-green),.5); background:rgba(var(--rgb-green),.12); }
+  .dt.pending .dt-st { color:var(--warn); border-color:rgba(var(--rgb-amber),.5); background:rgba(var(--rgb-amber),.12); }
+  .dt.unconfirmed .dt-st { color:var(--alert); border-color:rgba(var(--rgb-red),.5); background:rgba(var(--rgb-red),.1); }
+  #smsBox { display:flex; flex-direction:column; }
+  #smsText { display:block; flex:1; width:100%; min-height:96px; margin:0 0 16px; padding:16px; font:inherit; font-size:14px; resize:vertical; color:var(--fg); background:var(--inset); border:1px solid var(--line); border-radius:var(--r-btn); }
+  #smsText::placeholder { color:var(--muted); }
+  #smsText:focus-visible { outline:2px solid var(--violet); outline-offset:1px; }
+  #smsSend { width:100%; }
 
-  /* sms + details + summary */
-  details.card > summary { cursor:pointer; font-weight:600; font-size:15px; color:var(--fg); list-style:none; display:flex; justify-content:space-between; align-items:center; min-height:24px; }
-  details.card > summary::-webkit-details-marker { display:none; }
-  details.card > summary::after { content:"+"; color:var(--muted); font-size:22px; line-height:1; font-weight:400; }
-  details.card[open] > summary::after { content:"–"; }
-  details.card[open] > summary { margin-bottom:10px; }
-  #smsSend { margin-top:10px; }
-  table { width:100%; border-collapse:collapse; font-size:15px; }
-  td { padding:6px 2px; border-bottom:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; color:var(--fg); }
-  tr:last-child td { border-bottom:0; }
-  td.k { color:var(--muted); width:38%; }
-  tr.editable { cursor:pointer; transition:background var(--ease); }
-  tr.editable:hover { background:var(--glass); }
-  tr.editable td:last-child::after { content:" ✎"; color:var(--violet); }
-  .chip { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); margin-left:6px; white-space:nowrap; }
-  .chip.confirmed { color:var(--ok-text); border-color:rgba(var(--rgb-green),.5); }
-  .chip.unconfirmed, .chip.pending { color:var(--warn); border-color:rgba(var(--rgb-amber),.5); }
-  .handoff { border-color:rgba(var(--rgb-red),.6); }
-  .handoff h2 { color:var(--alert); font-size:15px; }
-  .call { display:inline-block; background:var(--red); color:var(--on-brand); text-decoration:none; font-weight:700; padding:10px 16px; border-radius:var(--r-btn); margin:0 6px 6px 0; }
-  .draft { font-size:11px; color:var(--warn); border:1px solid rgba(var(--rgb-amber),.5); border-radius:8px; padding:0 5px; margin-left:4px; white-space:nowrap; }
-  .ref { font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--fg); }
-  .row { display:flex; gap:10px; margin:12px 0 0; }
+  /* after the call */
+  .handoff { border-color:rgba(var(--rgb-red),.55); }
+  .handoff h2 { color:var(--alert); }
+  .call { display:inline-block; background:var(--red); color:#FFFFFF; text-decoration:none; font-weight:700; padding:8px 16px; border-radius:var(--r-btn); margin:0 8px 8px 0; }
+  .draft { font-size:11px; color:var(--warn); border:1px solid rgba(var(--rgb-amber),.5); border-radius:8px; padding:0 8px; margin-left:8px; white-space:nowrap; }
+  .sum-grid { display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; }
+  .ref { font-size:30px; font-weight:800; line-height:1.2; letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--fg); }
+  #refNote { color:var(--muted); font-size:13px; margin:8px 0 0; }
+  #totals { margin:16px 0 0; font-size:16px; font-weight:600; color:var(--fg); }
+  .row { display:flex; gap:8px; margin:24px 0 0; }
   .row > button { flex:1; }
+  #again { grid-column:1 / -1; justify-self:center; }
+  footer { color:var(--faint); font-size:12px; text-align:center; padding:24px 0; }
 
-  /* mic + footer */
-  #dock { position:fixed; left:0; right:0; bottom:0; z-index:4; background:var(--dock-bg); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom, 0px); }
-  #talk { display:flex; align-items:center; gap:12px; padding:12px; }
-  #ptt { flex:none; display:block; min-height:0; padding:0; background:none; border:0; border-radius:50%; touch-action:manipulation; user-select:none; }
-  #ptt:hover { background:none; }
-  .mic { position:relative; display:grid; place-items:center; width:62px; height:62px; border-radius:50%; background:var(--brand); color:var(--on-brand); box-shadow:var(--glow); transition:box-shadow var(--ease), transform var(--ease); }
-  #ptt:hover .mic { box-shadow:var(--glow-hi); transform:scale(1.04); }
-  .mic svg { width:27px; height:27px; }
-  #ptt.rec .mic { background:linear-gradient(135deg, var(--pink), var(--purple)); box-shadow:0 0 34px rgba(var(--rgb-pink),.6); }
-  #ptt.rec .mic::before, #ptt.rec .mic::after { content:""; position:absolute; inset:0; border-radius:50%; border:2px solid var(--pink); animation:ring 1.6s ease-out infinite; }
-  #ptt.rec .mic::after { animation-delay:.8s; }
-  .mic-status { flex:1; min-width:0; font-variant-numeric:tabular-nums; }
-  #wave { display:block; width:100%; max-width:280px; height:22px; margin:0 0 1px; }
-  .ptt-label { display:block; font-size:13.5px; font-weight:600; color:var(--fg); overflow:hidden; text-overflow:ellipsis; }
-  .dot { display:inline-block; flex:none; width:9px; height:9px; border-radius:50%; background:var(--pink); margin-right:7px; animation:pulse 1s ease-in-out infinite; }
-  .actions { flex:none; display:flex; flex-direction:column; gap:6px; }
-  .actions button { font-size:13px; line-height:1.25; padding:4px 12px; min-height:36px; }
-  #helpline { text-align:center; font-size:13px; color:var(--muted); padding:4px 12px 6px; }
-  #helpline a { color:var(--alert); font-weight:600; }
-  footer { color:var(--faint); font-size:12px; text-align:center; padding:18px 12px 52px; }
-
-  @media (max-width: 767px) {
-    #keypadCard { padding:10px; }
-    .dial { gap:6px; }
-    .dial button { min-height:50px; }
-    #keyHint { margin-top:6px; font-size:12px; }
-    #talk { padding:8px 12px; }
-    #logCard { scroll-margin:60px 0 44px; }
-    #numCount:empty { display:none; }
-    #npLabel { display:none !important; }
-    .dial.typing ~ #keyHint { display:none; }
-  }
-  @media (max-width: 419px) {
-    #sessionState { display:none; }
-  }
-  @media (max-width: 559px) {
-    .ptt-label { font-size:12.5px; }
-    header h1 { font-size:16px; }
-  }
-  /* 40/60 of the row after the gap. The transcript takes the left column's height and scrolls inside its own card:
-     #log has no height of its own, so a long conversation can never stretch the row or reach the sections below. */
   @media (min-width: 768px) {
-    #app { grid-template-columns:minmax(0, 2fr) minmax(0, 3fr); column-gap:24px; align-items:stretch; }
-    #app > .wide { grid-column:1 / -1; }
-    #logCard { height:auto; min-height:420px; max-height:calc(100vh - 130px); max-height:calc(100dvh - 130px); }
-    #log { flex:1 1 0; height:0; }
+    #phone, body.on-call #phone { padding-left:24px; padding-right:24px; }
+    #call { grid-template-columns:380px minmax(0, 1fr); }
+    .call-after { grid-column:1 / -1; }
+    .sum-grid { grid-template-columns:minmax(0, 1fr) minmax(0, 2fr); }
+  }
+  @media (min-width: 1024px) {
+    .call-after { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+    #detailsCard { grid-column:span 2; }
+    #handoff, #summaryBox, body.call-done #detailsCard { grid-column:1 / -1; }
+  }
+  @media (max-width: 480px) {
+    .card, #consentCard { padding:16px; }
+    .detail-grid { grid-template-columns:minmax(0, 1fr); }
+    .dial, .controls { column-gap:24px; }
+  }
+  @media (max-height: 740px) and (min-width: 768px) {
+    #screen { min-height:72px; }
+    .dial { row-gap:8px; }
+    .dial button { width:60px; height:60px; }
   }
 
-  @media (min-width: 768px) and (max-height: 780px) {
-    .dial button { min-height:47px; }
-    .dial b { font-size:20px; }
-    .card { padding:12px; }
-    #keypadCard { padding:10px; }
-  }
 
-  @keyframes pulse { 50% { opacity:.3; transform:scale(.75); } }
-  @keyframes ring { from { transform:scale(1); opacity:.75; } to { transform:scale(1.7); opacity:0; } }
+  /* near-black + blue glass */
+  body { font-family:"Inter", "Noto Sans Tamil", system-ui, sans-serif; font-weight:400; }
+  h2 { font-size:11px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--label); }
+  h3 { font-weight:600; }
+  button { background:var(--btn-bg); border:1px solid var(--btn-line); color:var(--fg); border-radius:var(--r-btn); font-weight:500; }
+  button:hover { background:var(--btn-bg); filter:brightness(1.15); }
+  button.primary { background:var(--accent); border:0; color:var(--on-accent); font-weight:600; box-shadow:none; }
+  button.primary:hover { background:var(--accent); }
+  a { color:var(--violet); }
+  ::placeholder { color:var(--placeholder); }
+  .card { background:var(--glass); border:1px solid var(--line); border-radius:var(--r-card); padding:20px; box-shadow:var(--shadow); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); }
+  .banner { background:rgba(245,166,35,.08); border:1px solid rgba(245,166,35,.15); color:var(--warn); border-radius:12px; margin:12px 16px; padding:8px 16px; }
+  .topbar { background:var(--header-bg); box-shadow:0 0 0 100vmax var(--header-bg), 0 1px 0 100vmax var(--header-line); clip-path:inset(0 -100vmax -1px -100vmax); }
+  .topbar .app { color:var(--fg); font-size:20px; font-weight:700; letter-spacing:-.02em; }
+  .badge { background:rgba(74,158,255,.15); color:var(--accent); border:1px solid rgba(74,158,255,.3); border-radius:20px; font-size:11px; font-weight:600; padding:2px 10px; letter-spacing:.02em; }
+  #themeToggle { color:var(--muted); background:transparent; }
+  .name { font-weight:700; }
+  #consentCard { padding:20px; background:var(--glass); border-color:var(--line); box-shadow:var(--shadow); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); }
+  .langs { background:var(--glass); }
+  .round.green { color:#0A0A14; }
+
+  /* keypad and number display */
+  .dial { grid-template-columns:repeat(3, 64px); }
+  .dial button { width:64px; height:64px; border-radius:50%; background:var(--key-bg); border:1px solid var(--key-line); color:var(--key-fg); font-size:22px; font-weight:500; }
+  #screen { background:var(--inset); border:1px solid var(--key-line); border-radius:12px; }
+  #screenDigits { color:var(--accent); font-weight:700; }
+  #screenDigits.typing, #screenDigits.text { color:var(--fg); }
+  .cap.ai.current { box-shadow:inset 2px 0 0 var(--accent); }
+
+  /* details as ruled rows */
+  .dt { background:none; border:0; border-bottom:1px solid var(--row-line); border-radius:0; transition:background var(--ease); }
+  .dt:hover { background:var(--row-hover); }
+  .dt-label { color:var(--label); font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
+  .dt-val { color:var(--fg); }
+  .dt.confirmed .dt-st { color:var(--ok-text); border-color:rgba(74,222,128,.3); background:rgba(74,222,128,.08); }
+  .dt.pending .dt-st, .dt.unconfirmed .dt-st { color:var(--warn); border-color:rgba(245,166,35,.3); background:rgba(245,166,35,.08); }
+
+  #smsText { background:var(--input-bg); border:1px solid var(--input-line); border-radius:12px; color:var(--fg); }
+  #smsText:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 2px rgba(74,158,255,.15); }
+  footer { color:var(--faint); font-size:12px; }
+
+  @keyframes pulse { 50% { opacity:.35; transform:scale(.75); } }
   @keyframes nudge { 50% { transform:translateX(5px); } }
-  @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
-  @keyframes breathe { 50% { box-shadow:var(--glow-hi); } }
-  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  @keyframes breathe { 50% { box-shadow:0 0 0 10px rgba(var(--rgb-purple),.12), var(--glow); } }
+  @keyframes blink { 50% { opacity:0; } }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation:none !important; transition:none !important; }
-    #ptt.rec .mic::before { opacity:.7; transform:scale(1.2); }
-    .spinner { border:3px solid var(--violet); background:none; -webkit-mask:none; mask:none; border-right-color:transparent; }
   }
 </style>
 </head>
 <body>
-<header>
-  <svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><defs><linearGradient id="logoGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#7C3AED"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs><path d="M5.5 16v-2.5a10.5 10.5 0 0121 0V16" stroke="url(#logoGradient)" stroke-width="2.6" stroke-linecap="round"/><rect x="2.5" y="15" width="5.5" height="9.5" rx="2.75" fill="url(#logoGradient)"/><rect x="24" y="15" width="5.5" height="9.5" rx="2.75" fill="url(#logoGradient)"/><path d="M12.5 11.5h7a3 3 0 013 3v4.5a3 3 0 01-3 3h-4.2l-3.3 3v-3a3 3 0 01-2.5-3v-4.5a3 3 0 013-3z" fill="url(#logoGradient)"/><g fill="#fff"><circle cx="12.6" cy="16.75" r="1.15"/><circle cx="16" cy="16.75" r="1.15"/><circle cx="19.4" cy="16.75" r="1.15"/></g></svg>
-  <h1 id="appName">CyberMitra</h1>
-  <span id="demoBadge" class="badge">Demo</span>
-  <div class="nav-right">
-    <span id="sessionState" aria-live="polite">Ready</span>
-    <span id="callStatus" class="status hidden"><i></i><span id="callTime">0:00</span></span>
+<div id="phone">
+  <div class="topbar">
+    <span id="appName" class="app">CyberDesk</span>
+    <span id="demoBadge" class="badge">Demo</span>
     <button id="themeToggle" type="button" aria-label="Switch theme"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 019.8 3.5a8.5 8.5 0 1010.7 10.7z"/></svg></button>
   </div>
-</header>
-<div id="banner" class="banner hidden"></div>
-<main>
-  <div id="start">
-    <div class="hero">
-      <h2 class="hero-title">Report Cyber Fraud</h2>
-      <p class="hero-ta">சைபர் மோசடியை புகாரளிக்கவும்</p>
-      <p class="tagline">AI-powered cyber fraud complaint assistant</p>
-      <button id="startCall" class="off">
-        <b><span class="spinner" aria-hidden="true"></span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1z"/></svg> Start Call</b>
-        <small>அழைப்பைத் தொடங்கு</small>
-      </button>
-      <div class="langs" role="radiogroup" aria-label="Language">
-        <label><input type="radio" name="lang" value="ta" checked><span>தமிழ்</span></label>
-        <label><input type="radio" name="lang" value="en"><span>English</span></label>
-      </div>
-      <p id="startErr" class="hidden"></p>
+  <p id="banner" class="banner hidden"></p>
+
+  <!-- before the call: a dialler with 1930 on it -->
+  <section id="dialer">
+    <div class="number" aria-label="1930">1930</div>
+    <p class="name-ta" style="margin-top:0">Cyber Crime Helpline · சைபர் கிரைம் உதவி எண்</p>
+    <div class="langs" role="radiogroup" aria-label="Language">
+      <label><input type="radio" name="lang" value="ta" checked><span>தமிழ்</span></label>
+      <label><input type="radio" name="lang" value="en"><span>English</span></label>
     </div>
-    <div id="consentCard" class="card">
-      <p>An <b>AI assistant</b> will take down what happened, read the numbers back to you, and send a <b>draft</b> to a cyber-crime officer for review. It is not the police, cannot freeze money, and does not file a complaint by itself. Audio is not stored.</p>
-      <p>ஒரு <b>AI உதவியாளர்</b> நடந்ததை கேட்டு, நம்பர்களை திரும்ப படித்து, ஒரு <b>வரைவை</b> அதிகாரியின் சரிபார்ப்புக்கு அனுப்பும். இது போலீஸ் இல்லை, பணத்தை முடக்க முடியாது. ஆடியோ சேமிக்கப்படாது.</p>
+    <div id="consentCard">
+      <p>Demo: an <b>AI assistant</b> answers this line, reads your numbers back, and sends a <b>draft</b> to an officer for review. Audio is not stored. Use made-up details only.</p>
+      <p>டெமோ: ஒரு <b>AI உதவியாளர்</b> பேசி, நம்பர்களை திரும்ப படித்து, ஒரு <b>வரைவை</b> அதிகாரிக்கு அனுப்பும். ஆடியோ சேமிக்கப்படாது.</p>
       <label class="agree"><input type="checkbox" id="consent"> <span>I understand and agree / புரிந்துகொண்டேன்</span></label>
     </div>
-  </div>
+    <div style="flex:1 0 24px"></div>
+    <button id="startCall" class="round green off" aria-label="Call 1930"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1z"/></svg></button>
+    <p class="under">Call / அழை</p>
+    <p id="startErr" class="hidden"></p>
+    <div style="height:28px"></div>
+  </section>
 
-  <div id="app" class="hidden">
-    <div class="col">
-      <section id="handoff" class="card handoff hidden">
-        <h2 id="handoffTitle">Connecting you to an officer</h2>
-        <p id="claimed" class="hidden"><b>✓ An officer has your details (simulated transfer in this demo).</b></p>
-        <p><a class="call" href="tel:1930">Call 1930</a><a id="manas" class="call hidden" href="tel:14416">Tele-MANAS 14416</a></p>
-        <p><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">cybercrime.gov.in</a></p>
-      </section>
-
-      <section id="summaryBox" class="card hidden">
-        <h2>Your summary / உங்கள் சுருக்கம்</h2>
-        <div class="ref" id="refId"></div>
-        <p id="refNote" style="color:var(--muted);font-size:13px;margin:2px 0 0"></p>
-        <p id="totals"></p>
-        <h3>What to do now / இப்போது செய்ய வேண்டியவை</h3>
-        <ol id="steps"></ol>
-        <p class="row"><button id="copyBtn" class="primary">Copy</button><button id="shareBtn">Share</button></p>
-      </section>
-
-      <section id="keypadCard" class="card">
-        <h2 id="npLabel" class="hidden"></h2>
-        <div id="entry">
-          <div id="numWrap"><input id="numDisplay" type="text" inputmode="numeric" autocomplete="off" aria-label="Number"></div>
-          <button id="npBack" aria-label="Delete last digit">⌫</button>
-        </div>
-        <div id="numCount" class="hidden"></div>
-        <div class="dial" id="dial"></div>
-        <p id="keyHint" aria-live="polite"></p>
-      </section>
-
-      <section id="talk" class="card hidden">
-        <button id="ptt" aria-label="Talk / stop">
-          <span class="mic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg></span>
-        </button>
-        <div class="mic-status" aria-live="polite">
-          <canvas id="wave" class="hidden" width="280" height="22" aria-hidden="true"></canvas>
-          <span class="ptt-label"><span id="recDot" class="dot hidden"></span><span id="pttText">Tap to talk / தட்டிப் பேசுங்கள்</span></span>
-        </div>
-        <div class="actions">
-          <button id="backBtn" class="hidden">← Back / பின்னால்</button>
-          <button id="skipBtn">Skip / தவிர்</button>
-        </div>
-      </section>
+  <!-- the call -->
+  <section id="call" class="hidden">
+    <div class="call-left card">
+    <div class="who">
+      <div id="avatar" class="avatar" aria-hidden="true">1930</div>
+      <div class="who-text">
+        <p class="name">Cyber Crime Helpline</p>
+        <p class="name-ta">சைபர் கிரைம் உதவி எண் · AI</p>
+        <p id="callState" aria-live="polite"><i></i><span id="callText">Calling…</span></p>
+      </div>
     </div>
 
-    <section id="logCard" class="card">
-      <span id="busySpin" class="spinner" aria-hidden="true"></span>
-      <h2>Live transcript / உரையாடல்</h2>
-      <div id="log" role="log"></div>
-      <div id="transcript"></div>
-      <div id="readback" class="hidden">
-        <h2 id="rbLabel"></h2>
-        <div id="rbDigits"></div>
+    <div id="incall">
+      <div id="screen" aria-live="polite">
+        <div id="screenLabel"></div>
+        <div id="screenDigits"></div>
+        <div id="screenNote"></div>
       </div>
-      <div id="typeBox" class="hidden">
-        <h2 id="typeLabel">Or type it / டைப் செய்யுங்கள்</h2>
-        <input id="typeInput" type="text" maxlength="80" autocomplete="off" enterkeyhint="send">
-        <p id="typeHint"></p>
+      <div class="dial" id="dial"></div>
+      <div class="controls">
+        <div class="ctl"><button id="muteBtn" aria-pressed="false" aria-label="Mute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg></button><span>Mute</span></div>
+        <button id="endCall" class="round red" aria-label="End call"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1z"/></svg></button>
+        <div class="ctl"><button id="repeatBtn" aria-label="Hear it again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></svg></button><span>Repeat</span></div>
       </div>
-    </section>
+    </div>
+    </div>
 
-    <details id="smsBox" class="card wide">
-      <summary>Paste bank SMS / பேங்க் SMS பேஸ்ட் செய்யுங்கள்</summary>
-      <textarea id="sms" placeholder="Rs.50,000 debited ... UPI Ref No 4306XXXXXXXX&#10;(paste several SMS: one per debit)"></textarea>
-      <button id="smsSend" class="primary">Use SMS</button>
-    </details>
+    <aside class="call-right card" aria-label="Live transcript">
+      <h2>Live transcript / நேரடி உரையாடல்</h2>
+      <div class="cap-wrap"><div id="captions" role="log" aria-label="Live captions"></div></div>
+    </aside>
 
-    <section id="detailsBox" class="card wide">
-      <h2>Details so far / விவரங்கள் <span id="editHint" class="hidden" style="font-weight:400">— tap a row to fix it</span></h2>
-      <div id="txnTables"></div>
-      <h3>Case</h3>
-      <table id="fields"></table>
+    <div class="call-after">
+    <section id="detailsCard" class="card">
+      <h2>Details so far / இதுவரை விவரங்கள்</h2>
+      <div id="details" class="detail-grid"></div>
     </section>
-  </div>
-</main>
-<footer>Not affiliated with MHA, I4C, NCRP or Tamil Nadu Police. Draft only — always call 1930 and file at cybercrime.gov.in.</footer>
-<div id="dock">
-  <div id="helpline">Emergency? <a href="tel:1930">Call 1930</a></div>
+    <section id="smsBox" class="card">
+      <h2><label for="smsText">Paste bank SMS / பேங்க் SMS</label></h2>
+      <textarea id="smsText" rows="3" maxlength="2000" placeholder="Fake details only / போலி விவரங்கள் மட்டும்"></textarea>
+      <button id="smsSend" class="primary">Add SMS / சேர்க்க</button>
+    </section>
+    <section id="handoff" class="card handoff hidden">
+      <h2 id="handoffTitle">Connecting you to an officer</h2>
+      <p id="claimed" class="hidden" style="margin:0 0 8px"><b>✓ An officer has your details (simulated transfer in this demo).</b></p>
+      <p id="manasRow" class="hidden" style="margin:0"><a class="call" href="tel:14416">Tele-MANAS 14416</a></p>
+      <p style="margin:0"><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">cybercrime.gov.in</a></p>
+    </section>
+    <section id="summaryBox" class="card hidden">
+      <h2>SMS from 1930 · simulated in this demo / SMS (டெமோ)</h2>
+      <div class="sum-grid">
+        <div>
+          <div class="ref" id="refId"></div>
+          <p id="refNote"></p>
+          <p id="totals"></p>
+        </div>
+        <div>
+          <h2>What to do now / இப்போது செய்ய வேண்டியவை</h2>
+          <ol id="steps"></ol>
+        </div>
+      </div>
+      <p class="row"><button id="copyBtn" class="primary">Copy</button><button id="shareBtn">Share</button></p>
+    </section>
+    <button id="again" class="hidden">New call / புதிய அழைப்பு</button>
+    </div>
+  </section>
+
+  <footer>Demo of an AI front desk for the 1930 line. Not connected to the real helpline, and not affiliated with MHA, I4C, NCRP or Tamil Nadu Police.</footer>
 </div>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   // --- theme: applied before first paint by the script in <head>; the choice is a per-viewer convenience
-  const html = document.documentElement, THEME_KEY = "cybermitra-theme";
+  const html = document.documentElement, THEME_KEY = "cyberdesk-theme";
   function labelTheme() {
     const label = `Switch to ${html.dataset.theme === "dark" ? "light" : "dark"} theme`;
     $("themeToggle").setAttribute("aria-label", label); $("themeToggle").title = label;
@@ -382,19 +374,21 @@
   labelTheme();
   fetch("/health").then(r => r.json()).then(h => { if (h.app_name) { $("appName").textContent = h.app_name; document.title = h.app_name; } }).catch(() => {});
 
-  const TXN_LABELS = { amount:"Amount / தொகை", datetime:"When / நேரம்", utr:"UTR / Ref" };
-  const LABELS = { victim_bank:"Your bank / உங்க பேங்க்", payment_mode:"Paid via / வழி", suspect_phone:"Caller's number / கால் வந்த நம்பர்",
-    suspect_upi:"Their UPI ID", suspect_bank:"Their bank", called_bank:"Called your bank? / பேங்க்கு கால்",
-    district:"District / மாவட்டம்", victim_name:"Your name / பெயர்", victim_mobile:"Your mobile / மொபைல்" };
-  const ALL_LABELS = Object.assign({}, TXN_LABELS, LABELS);
-  const DIGIT_FIELDS = ["amount", "utr", "suspect_phone", "victim_mobile"];
-  const TEXT_HINTS = { victim_bank:"e.g. SBI", suspect_bank:"e.g. HDFC", payment_mode:"UPI / card / net banking",
-    datetime:"e.g. yesterday 3 pm / 2 Nov 15:30", suspect_upi:"e.g. name@ybl", victim_name:"", district:"e.g. Madurai",
-    called_bank:"yes / no" };
-  let sid = null, last = null, numpadTarget = null, numBuf = "", typeTarget = null, audioQueue = [], poll = null, busy = false;
+  const LABELS = { amount:"Amount / தொகை", datetime:"When / நேரம்", utr:"UTR number", victim_bank:"Your bank / உங்க பேங்க்",
+    payment_mode:"Paid via / வழி", suspect_phone:"Caller's number / கால் வந்த நம்பர்", suspect_upi:"Their UPI ID",
+    suspect_bank:"Their bank", called_bank:"Called your bank?", district:"District / மாவட்டம்", victim_name:"Your name / பெயர்",
+    victim_mobile:"Your mobile / மொபைல்" };
+  const TXN_FIELDS = ["amount", "datetime", "utr"];
+  const KEYPAD_FIELDS = ["amount", "utr", "suspect_phone", "victim_mobile"];  // a phone keypad can only enter numbers
+  const NUM_LENGTHS = { utr: 12, suspect_phone: 10, victim_mobile: 10 };
+  let sid = null, last = null, numpadTarget = null, numBuf = "", audioQueue = [], poll = null, busy = false, muted = false, ended = false;
+  let endAfterAudio = false;  // a finished call hangs up once the AI has said goodbye
+  // The AI talks fast, like a busy helpline: Timbre's fastest speed, played a little faster still (pitch kept).
+  const PLAYBACK_RATE = 1.3;
   const player = new Audio();
+  player.defaultPlaybackRate = PLAYBACK_RATE; player.preservesPitch = true;
 
-  // --- consent + start
+  // --- dial 1930
   $("consent").addEventListener("change", e => {
     $("startCall").classList.toggle("off", !e.target.checked);
     $("consentCard").classList.remove("nudge");
@@ -403,18 +397,20 @@
     if (!$("consent").checked) {
       const card = $("consentCard");
       card.classList.remove("nudge"); void card.offsetWidth; card.classList.add("nudge");
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     const lang = document.querySelector("input[name=lang]:checked").value;
     show("startErr", false);
-    $("startCall").disabled = true; $("startCall").classList.add("loading");
+    $("startCall").classList.add("loading");
+    player.play().catch(() => {});  // unlocks audio on this tap, so the AI can speak without another one
+    await openMic();
     const r = await api("/api/session", { lang, consent: true });
-    $("startCall").disabled = false; $("startCall").classList.remove("loading");
+    $("startCall").classList.remove("loading");
     if (!r) return;  // api() has shown why
     sid = r.session_id;
-    $("start").classList.add("hidden"); $("app").classList.remove("hidden");
-    scrollTo(0, 0);
+    $("dialer").classList.add("hidden"); $("call").classList.remove("hidden");
+    document.body.classList.add("on-call");
+    $("avatar").classList.add("live");
     startClock();
     render(r);
   });
@@ -426,123 +422,154 @@
       else if (body !== undefined) { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body || {}); }
       const res = await fetch(path, opts);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { showError((data.prompt && data.prompt.text) || ("Error " + res.status + ". Please call 1930.")); return null; }
+      if (!res.ok) { showError((data.prompt && data.prompt.text) || ("Error " + res.status + ". Please call again.")); return null; }
       return data;
-    } catch (e) { showError("Network error. Please call 1930."); return null; }
+    } catch (e) { showError("The line dropped. Please call again."); return null; }
   }
   function showError(text) {
-    if (sid) logLine("ai", text);
+    if (sid) caption("ai", text);
     else { $("startErr").textContent = text; show("startErr", true); }
   }
 
-  // --- call timer + live transcript
-  let clockTimer = null;
-  function startClock() {
-    const began = Date.now();
-    show("callStatus", true); refreshStatus();
-    clockTimer = setInterval(() => { $("callTime").textContent = clock(Math.floor((Date.now() - began) / 1000)); }, 1000);
-  }
-  function stopClock() { clearInterval(clockTimer); $("callStatus").classList.add("ended"); }
+  // --- call timer and status line
+  let clockTimer = null, began = 0;
+  const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const elapsed = () => clock(Math.floor((Date.now() - began) / 1000));
+  function startClock() { began = Date.now(); clockTimer = setInterval(refreshStatus, 1000); refreshStatus(); }
+  function stopClock() { clearInterval(clockTimer); }
   function refreshStatus() {
-    $("sessionState").textContent = !sid ? "Ready" : callOver() ? "Call ended" : ptt.classList.contains("rec") ? "Listening"
-      : busy ? "Processing" : "In call";
+    const st = $("callState");
+    let what = "", mode = "";
+    if (ended) what = "Call ended";
+    else if (last && last.handoff) what = last.summary && last.summary.operator_claimed ? "With an officer (simulated)" : "On hold · connecting to an officer";
+    else if (busy) what = "…";
+    else if (rec) { what = "Listening"; mode = "listening"; }
+    else if (!player.paused || audioQueue.length) { what = "Speaking"; mode = "speaking"; }
+    else if (muted) what = "Muted";
+    st.className = mode;
+    $("callText").textContent = began ? `${elapsed()}${what ? " · " + what : ""}` : "Calling…";
   }
   function setBusy(on) { busy = on; document.body.classList.toggle("busy", on); refreshStatus(); }
-  function logLine(who, text) {
-    const box = $("log"), prev = box.lastElementChild;
-    // The newest AI line is the current question. A question asked again after the caller spoke is a new line.
+  function caption(who, text) {
+    const box = $("captions"), prev = box.lastElementChild;
     if (!text || (who === "ai" && prev && prev.classList.contains("ai") && prev.textContent === text)) return;
     const line = document.createElement("div");
-    line.className = "msg " + who; line.textContent = text;
-    if (who === "ai") {
-      box.querySelectorAll(".msg.current").forEach(m => m.classList.remove("current"));
-      line.classList.add("current");
-    }
+    line.className = "cap " + who; line.textContent = text;
+    if (who === "ai") { box.querySelectorAll(".cap.current").forEach(m => m.classList.remove("current")); line.classList.add("current"); }
     box.append(line); box.scrollTop = box.scrollHeight;
   }
 
-  // --- audio playback (sequential)
+  // --- the AI speaks, then the line listens: half duplex, like the phone path
   function play(urls) { audioQueue = (urls || []).slice(); player.pause(); next(); }
-  function stopSpeaking() { audioQueue = []; player.pause(); }
-  function next() { const u = audioQueue.shift(); if (!u) return; player.src = u; player.onended = next; player.play().catch(() => {}); }
+  function stopSpeaking() { audioQueue = []; player.pause(); refreshStatus(); }
+  function next() {
+    const u = audioQueue.shift();
+    if (!u) { if (endAfterAudio && !ended) endCallUi(); refreshStatus(); listen(); return; }
+    player.src = u; player.onended = next; player.playbackRate = PLAYBACK_RATE;
+    player.play().then(refreshStatus).catch(next);
+  }
+  const speaking = () => !player.paused || audioQueue.length > 0;
 
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
   const show = (id, on) => $(id).classList.toggle("hidden", !on);
-  function chip(f) {
-    if (!f || f.status === "empty") return "";
-    const label = f.verify ? "⚠ verify" : f.status === "skipped" ? "skipped" : "✓ " + (f.source || "");
-    return `<span class="chip ${esc(f.status)}">${esc(label)}</span>`;
-  }
+  const callOver = () => ended || !last || last.state === "QUEUED" || !!last.handoff;
 
-  // --- render
+  // --- render one reply
   function render(r) {
-    const enteringReview = r.state === "REVIEW" && !(last && last.state === "REVIEW");
     last = r;
     cancelRec();
     if (r.demo_banner) { $("banner").textContent = r.demo_banner; show("banner", true); }
-    $("transcript").textContent = "";
-    logLine("you", r.transcript); logLine("ai", r.prompt.text);
-    play(r.prompt.audio_urls);
+    caption("you", r.transcript); caption("ai", r.prompt.text);
+    renderDetails(r);
     const done = r.state === "QUEUED" || !!r.handoff;
-    const reviewing = r.state === "REVIEW";
-    // transactions
-    $("txnTables").innerHTML = r.txns.map(t => {
-      const rows = Object.keys(TXN_LABELS).map(k => row(k, t[k], t.index, reviewing)).join("");
-      return `<h3>Transaction ${t.index + 1}</h3><table>${rows}</table>`;
-    }).join("");
-    $("fields").innerHTML = Object.keys(LABELS).map(k => row(k, r.fields[k], null, reviewing)).join("");
-    show("editHint", reviewing);
-    // readback
-    if (r.readback && !done) {
-      show("readback", true);
-      const rb = r.readback, f = fieldOf(rb.field, rb.txn_index);
-      const tx = rb.txn_index !== null && rb.txn_index !== undefined && r.txns.length > 1 ? `Transaction ${rb.txn_index + 1} · ` : "";
-      $("rbLabel").textContent = tx + (ALL_LABELS[rb.field] || rb.field) + (rb.total_chunks > 1 ? ` (${rb.chunk_index + 1}/${rb.total_chunks})` : "");
-      const whole = ["amount", "datetime"].includes(rb.field) || !DIGIT_FIELDS.includes(rb.field) && rb.field !== "suspect_upi";
-      $("rbDigits").textContent = whole && f ? f.display : rb.chunk_display;
-      $("rbDigits").classList.toggle("text", !DIGIT_FIELDS.includes(rb.field));
-    } else show("readback", false);
-    // A correction goes straight to typing. Any other number question waits for * so that 1, 2, 3 and 0 keep their meaning.
-    const np = r.numpad && DIGIT_FIELDS.includes(r.numpad.field) ? r.numpad : null;
-    // Typing stays open during REVIEW only for a row the caller chose to fix, never left over from the last question.
-    if (np && !done) openNumpad(np.field, np.txn_index); else if (!reviewing || enteringReview) closeNumpad();
-    // typed entry for text fields
-    const cur = r.current_field;
-    if (["GAP_FILL", "READBACK"].includes(r.state) && cur && cur in TEXT_HINTS && !done) openType(cur, r.current_txn);
-    else if (!reviewing || enteringReview) closeType();
-    // end states
-    show("talk", !done); show("keypadCard", !done); show("smsBox", !done); show("backBtn", !!r.can_back && !done);
-    updateKeys();
-    if (done) stopClock();
+    // Typing starts only when the caller presses * (the question says so), never by itself.
+    const np = r.numpad && KEYPAD_FIELDS.includes(r.numpad.field) ? r.numpad : null;
+    closeNumpad();
+    if (np && np.error) drawScreen("That doesn't look right. Press * and type it again. / * அழுத்தி மறுபடி டைப் பண்ணுங்க.", true); else drawScreen();
+    play(r.prompt.audio_urls);
+    if (done) finish(r);
+    refreshStatus();
+  }
+  // --- details so far: what this reply already says was captured, with its status
+  const DETAIL_FIELDS = ["victim_bank", "payment_mode", "suspect_phone", "suspect_upi", "suspect_bank", "called_bank", "district", "victim_name", "victim_mobile"];
+  const STATUS_MARK = { confirmed: ["✓", "Confirmed"], pending: ["○", "Pending"], unconfirmed: ["!", "Needs checking"], skipped: ["–", "Skipped"], empty: ["○", "Not given yet"] };
+  function detailRow(label, f) {
+    const status = f && STATUS_MARK[f.status] ? f.status : "empty", [mark, title] = STATUS_MARK[status];
+    return `<div class="dt ${status}"><div class="dt-text"><span class="dt-label">${esc(label)}</span><span class="dt-val">${esc(f && f.display ? f.display : "—")}</span></div><span class="dt-st" role="img" title="${title}" aria-label="${title}">${mark}</span></div>`;
+  }
+  function renderDetails(r) {
+    const many = r.txns.length > 1, rows = [], f = r.fields || {};
+    (r.txns.length ? r.txns : [{}]).forEach((t, i) => TXN_FIELDS.forEach(k => rows.push(detailRow((many ? `Txn ${i + 1} · ` : "") + LABELS[k], t[k]))));
+    DETAIL_FIELDS.forEach(k => {
+      const upiRelevant = (f.payment_mode && f.payment_mode.value === "UPI") || (f.suspect_upi && f.suspect_upi.value);
+      if (k !== "suspect_upi" || upiRelevant) rows.push(detailRow(LABELS[k], f[k]));
+    });
+    $("details").innerHTML = rows.join("");
+  }
+  function stillAsking(t) { return last && ["GAP_FILL", "READBACK"].includes(last.state) && last.current_field === t.field; }
+  function fieldOf(name, txn) {
+    if (!last) return null;
+    if (TXN_FIELDS.includes(name)) return last.txns[txn ?? 0] ? last.txns[txn ?? 0][name] : null;
+    return last.fields[name];
+  }
+  // The display above the keypad: what is being typed, or the part of a number being read back
+  function drawScreen(note, isErr) {
+    const d = $("screenDigits");
+    d.className = "";
+    if (numpadTarget) {
+      const want = numpadTarget.part ? 0 : NUM_LENGTHS[numpadTarget.field];
+      $("screenLabel").textContent = (numpadTarget.part ? "Type the correct digits of " : "Type ") + (LABELS[numpadTarget.field] || numpadTarget.field) + " · then #";
+      d.textContent = numpadTarget.field === "amount" && numBuf ? "₹" + Number(numBuf).toLocaleString("en-IN") : numBuf;
+      d.classList.add("typing");
+      $("screenNote").textContent = note || (want ? `${numBuf.length} / ${want}` : "");
+    } else if (last && last.state === "STORY_CHECK" && !callOver()) {
+      // what the story gave, checked with one key
+      const t = last.txns[0] || {}, f = last.fields;
+      const facts = [t.amount, t.datetime, f.payment_mode, f.victim_bank].filter(x => x && x.status === "pending").map(x => x.display);
+      $("screenLabel").textContent = "Is this right? / சரியா?";
+      d.textContent = facts.join(" · ");
+      d.classList.add("text");
+      $("screenNote").textContent = note || "1 yes / ஆம் · 2 no / இல்லை";
+    } else if (last && last.readback && !callOver()) {
+      const rb = last.readback, f = fieldOf(rb.field, rb.txn_index);
+      const whole = !["utr", "suspect_phone", "victim_mobile", "suspect_upi"].includes(rb.field);
+      $("screenLabel").textContent = (LABELS[rb.field] || rb.field) + (rb.total_chunks > 1 ? ` (${rb.chunk_index + 1}/${rb.total_chunks})` : "");
+      d.textContent = whole && f ? f.display : rb.chunk_display;
+      if (!KEYPAD_FIELDS.includes(rb.field)) d.classList.add("text");
+      $("screenNote").textContent = note || "";
+    } else {
+      const typedAsk = typedQuestion();
+      $("screenLabel").textContent = typedAsk ? (LABELS[last.current_field] || "") : ""; d.textContent = "";
+      $("screenNote").textContent = note || (typedAsk ? "Press * to type, # when done · 2 if you don't know / * அழுத்தி டைப் · தெரியலைன்னா 2" : "") || (stream ? "" : "Microphone blocked: use the keypad / மைக் இல்லை: கீபேட் பயன்படுத்துங்க");
+    }
+    $("screenNote").classList.toggle("err", !!isErr);
+  }
+  function finish(r) {
+    numpadTarget = null; drawScreen();
+    show("incall", false);
     if (r.handoff) {
       show("handoff", true);
       $("handoffTitle").textContent = r.handoff === "HANDOFF_WELLBEING" ? "Please get help now" : "Connecting you to an officer";
-      show("manas", r.handoff === "HANDOFF_WELLBEING");
+      show("manasRow", r.handoff === "HANDOFF_WELLBEING");
       startPoll();
-    }
+    } else endAfterAudio = true;
     if (r.summary) showSummary(r.summary);
-    refreshStatus();
-    // Stacked, the question is below the keypad. Bring it into view, unless the call ended and the summary matters more.
-    if (!done && matchMedia("(max-width: 767px)").matches) $("logCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    revealAfter();
   }
-  function fieldOf(name, txn) {
-    if (!last) return null;
-    if (name in TXN_LABELS) return last.txns[txn ?? 0] ? last.txns[txn ?? 0][name] : null;
-    return last.fields[name];
+  // The call is over: bring the card under the panels into view.
+  function revealAfter() {
+    document.body.classList.add("call-done");
+    show("smsBox", false);
+    $("captions").scrollTop = $("captions").scrollHeight;
+    document.querySelector(".call-after").scrollIntoView({ block: "start" });
   }
-  function row(k, f, txn, editable) {
-    if (!f) return "";
-    const attrs = editable ? ` class="editable" data-field="${k}" data-txn="${txn ?? ""}"` : "";
-    return `<tr${attrs}><td class="k">${ALL_LABELS[k]}</td><td>${esc(f.display)}${chip(f)}</td></tr>`;
+  function endCallUi() {
+    ended = true;
+    stopClock(); cancelRec(); refreshStatus();
+    $("avatar").classList.remove("live");
+    show("incall", false); show("again", true);
+    revealAfter();
   }
-  // tap a row during REVIEW to fix it (typed input is authoritative)
-  $("detailsBox").addEventListener("click", e => {
-    const tr = e.target.closest("tr.editable"); if (!tr) return;
-    const field = tr.dataset.field, txn = tr.dataset.txn === "" ? null : Number(tr.dataset.txn);
-    if (DIGIT_FIELDS.includes(field)) { closeType(); openNumpad(field, txn); $("keypadCard").scrollIntoView({ behavior: "smooth" }); }
-    else { closeNumpad(); openType(field, txn); $("typeBox").scrollIntoView({ behavior: "smooth" }); }
-  });
-
   function showSummary(s) {
     show("summaryBox", true);
     $("refId").textContent = s.packet_id || "";
@@ -551,151 +578,116 @@
     $("steps").innerHTML = s.next_steps.map(x => `<li>${esc(x.text)}${x.draft ? '<span class="draft">draft guidance</span>' : ""}</li>`).join("");
     $("summaryBox").dataset.text = s.text;
     show("claimed", !!s.operator_claimed);
+    if (last) last.summary = s;
+    refreshStatus();
   }
   function startPoll() {
     if (poll) return;
     poll = setInterval(async () => {
       const s = await api(`/api/session/${sid}/summary`, undefined, false, "GET");
-      if (s) { showSummary(s); if (s.operator_claimed) { clearInterval(poll); } }
+      if (s) { showSummary(s); if (s.operator_claimed) clearInterval(poll); }
     }, 5000);
   }
 
-  // One request at a time, so a double tap cannot answer the next question.
+  // One request at a time, so a double press cannot answer the next question.
   async function send(path, body, isForm) {
     if (busy) return null;
     setBusy(true);
     const r = await api(path, body, isForm);
     setBusy(false);
-    if (r) render(r);
+    if (r) render(r); else listen();
     return r;
   }
 
-  // --- the keypad: the same keys as a phone call (CLAUDE.md §6.16). Keys are authoritative, like the ✓/✗ they replace.
-  const KEYS = [["1","Yes / ஆம்"],["2","No / இல்லை"],["3","Repeat / மீண்டும்"],["4",""],["5",""],["6",""],["7",""],["8",""],["9",""],
-    ["*","Type number / டைப்"],["0","Human / அதிகாரி"],["#","Submit / அனுப்பு"]];
-  $("dial").innerHTML = KEYS.map(([k, label]) => `<button data-k="${k}" aria-label="${k}${label ? " " + label : ""}"><b>${k}</b><small>${label || "&nbsp;"}</small></button>`).join("");
+  // --- the keypad: plain phone keys. The opening tells the caller what they do (CLAUDE.md §6.16):
+  // 1 yes, 2 no, * then the number then # to type one. 3 repeats and 0 asks for an officer, as on the phone line.
+  const KEYS = ["1","2","3","4","5","6","7","8","9","*","0","#"];
+  $("dial").innerHTML = KEYS.map(k => `<button data-k="${k}" aria-label="${k === "*" ? "star" : k === "#" ? "hash" : k}">${k}</button>`).join("");
   $("dial").addEventListener("click", e => { const b = e.target.closest("button"); if (b) pressKey(b.dataset.k); });
-  const callOver = () => !last || last.state === "QUEUED" || !!last.handoff;
+  document.addEventListener("keydown", e => {
+    if (!sid || callOver() || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("#smsBox")) return;
+    if (KEYS.includes(e.key)) { e.preventDefault(); pressKey(e.key); }
+    else if (e.key === "Enter") { e.preventDefault(); pressKey("#"); }
+    else if (e.key === "Backspace" && numpadTarget) { e.preventDefault(); setNum(numBuf.slice(0, -1)); }
+  });
   const hasYesNo = () => !!last && !!(last.ask || last.readback);
+  // UTR and mobile numbers are typed: the line does not listen for them, so room noise cannot answer
+  const typedQuestion = () => !!last && last.state === "GAP_FILL" && ["utr", "suspect_phone", "victim_mobile"].includes(last.current_field);
   function numericField() {
-    if (!last || !["GAP_FILL", "READBACK"].includes(last.state) || !DIGIT_FIELDS.includes(last.current_field)) return null;
+    if (!last || !["GAP_FILL", "READBACK"].includes(last.state) || !KEYPAD_FIELDS.includes(last.current_field)) return null;
     return { field: last.current_field, txn_index: last.current_txn };
   }
   function pressKey(k) {
     if (busy || callOver()) return;
-    if (rec) {
-      if (k === "#") { stopRec(); return; }
-      if (!"0123".includes(k)) return;
-      cancelRec();  // this key answers the question, so the open recording no longer does
-    }
-    stopSpeaking();  // a key interrupts the AI
-    updateKeys();  // clears any hint left by the last key
+    cancelRec();      // a key answers the question, so the open recording no longer does
+    stopSpeaking();   // and it interrupts the AI
     if (numpadTarget) {
-      if (k === "#") submitNum();
-      else if (k === "*") { closeNumpad(); updateKeys(); }
+      if (k === "#") { if (numBuf) submitNum(); else { closeNumpad(); drawScreen(); listen(); } }
+      else if (k === "*") { setNum(""); listen(); }  // star starts the number again
       else setNum(numBuf + k);
-    } else if (k === "0") send(`/api/session/${sid}/human`, {});
+      return;
+    }
+    if (k === "0") send(`/api/session/${sid}/human`, {});
     else if (k === "3") play(last.prompt.audio_urls);
-    else if (k === "1" || k === "2") answer(k === "1" ? "yes" : "no");
-    else if (k === "*") {
-      const f = numericField();
-      if (f) { openNumpad(f.field, f.txn_index); updateKeys(); } else startRec();
-    } else if (k === "#" && typeTarget) sendTyped();
-    else $("keyHint").textContent = numericField() ? "Press * to type a number / டைப் செய்ய * அழுத்துங்கள்" : "Tap the mic to speak / பேச மைக்கை தட்டுங்கள்";
+    else if ((k === "1" || k === "2") && hasYesNo()) answer(k === "1" ? "yes" : "no");
+    else if (k === "2" && last.state === "GAP_FILL" && numericField())  // 2 on a number question: "I don't know it"
+      send(`/api/session/${sid}/confirm`, { field: last.current_field, txn_index: last.current_txn, answer: "no" });
+    else if (k === "*" && numericField()) {
+      // during a correction only the wrong group is typed; the server said which one
+      const f = numericField(), part = last.readback && last.numpad ? last.numpad.chunk_index : null;
+      openNumpad(f.field, f.txn_index, null, part); drawScreen();
+    }
+    else listen();  // this key means nothing here
   }
   function answer(a) {
     if (last.ask) send(`/api/session/${sid}/confirm`, { field: last.ask, answer: a });
-    else if (last.readback) {
+    else {
       const rb = last.readback;
       send(`/api/session/${sid}/confirm`, { field: rb.field, txn_index: rb.txn_index, chunk_index: rb.chunk_index, answer: a });
-    } else $("keyHint").textContent = "This one is not a yes or no question / இது ஆம்-இல்லை கேள்வி இல்லை";
+    }
   }
-  function updateKeys() {
-    const typing = !!numpadTarget;
-    $("dial").classList.toggle("typing", typing);
-    $("dial").classList.toggle("yesno", !typing && hasYesNo());
-    $("entry").classList.toggle("on", typing);
-    show("npLabel", typing); show("numCount", typing);
-    $("dial").querySelector('[data-k="*"] small').textContent = typing ? "Cancel / ரத்து" : "Type number / டைப்";
-    $("keyHint").textContent = typing ? "Type the number, then press # / எண்ணை டைப் செய்து # அழுத்துங்கள்"
-      : hasYesNo() ? "Press 1 or 2, or just say it / 1 அல்லது 2 அழுத்துங்கள், அல்லது சொல்லுங்கள்"
-      : numericField() ? "Tap the mic and say it, or press * to type / மைக்கை தட்டி சொல்லுங்கள், அல்லது * அழுத்துங்கள்"
-      : typeTarget ? "Tap the mic and say it, or type it in the box and press # / மைக்கை தட்டி சொல்லுங்கள்"
-      : "Tap the mic or press * and speak / மைக்கை தட்டி பேசுங்கள்";
-  }
-  $("npBack").addEventListener("click", () => setNum(numBuf.slice(0, -1)));
-  // Whole numbers go in at once, typed or pasted, with or without spaces: only the digits are kept.
-  const NUM_LENGTHS = { utr: 12, suspect_phone: 10, victim_mobile: 10 };
-  function setNum(v) {
-    numBuf = v.replace(/\D/g, "").slice(0, 14);
-    const box = $("numDisplay"), want = numpadTarget && NUM_LENGTHS[numpadTarget.field];
-    if (box.value !== numBuf) box.value = numBuf;
-    $("numCount").textContent = want ? `${numBuf.length} / ${want} digits` : "";
-  }
-  $("numDisplay").addEventListener("input", e => setNum(e.target.value));
-  $("numDisplay").addEventListener("keydown", e => { if (e.key === "Enter") submitNum(); });
-  function openNumpad(field, txn) {
+  function setNum(v) { numBuf = v.replace(/\D/g, "").slice(0, 14); drawScreen(); }
+  function openNumpad(field, txn, error, chunk) {
     const key = field + "#" + (txn ?? "");
     const same = numpadTarget && numpadTarget.key === key;
-    numpadTarget = { field, txn_index: txn ?? null, key };
-    setNum(same ? numBuf : "");
-    $("npLabel").textContent = "Type " + (ALL_LABELS[field] || field) + (txn !== null && txn !== undefined && last && last.txns.length > 1 ? ` (transaction ${txn + 1})` : "");
-    updateKeys();
+    // part: correcting one group of a read-back number, so the whole-number length does not apply
+    numpadTarget = { field, txn_index: txn ?? null, key, part: chunk !== undefined && chunk !== null && field !== "amount" };
+    numBuf = same && !error ? numBuf : "";
   }
-  function closeNumpad() { numpadTarget = null; }
+  function closeNumpad() { numpadTarget = null; numBuf = ""; }
   async function submitNum() {
     if (!numpadTarget || !numBuf || busy) return;
-    const target = numpadTarget, digits = numBuf, wasReview = last && last.state === "REVIEW";
-    setNum("");
-    if (wasReview) closeNumpad();
-    if (!await send(`/api/session/${sid}/numpad`, { field: target.field, txn_index: target.txn_index, digits }) && wasReview) updateKeys();
+    const target = numpadTarget, digits = numBuf;
+    numBuf = "";
+    await send(`/api/session/${sid}/numpad`, { field: target.field, txn_index: target.txn_index, digits });
   }
 
-  // --- typed text
-  function openType(field, txn) {
-    const key = field + "#" + (txn ?? "");
-    if (!typeTarget || typeTarget.key !== key) $("typeInput").value = "";
-    typeTarget = { field, txn_index: txn ?? null, key };
-    $("typeLabel").textContent = "Or type " + (ALL_LABELS[field] || field);
-    $("typeInput").placeholder = TEXT_HINTS[field] || "";
-    $("typeHint").textContent = "";
-    show("typeBox", true);
-  }
-  function closeType() { typeTarget = null; show("typeBox", false); }
-  async function sendTyped() {
-    const v = $("typeInput").value.trim();
-    if (!typeTarget || !v || busy) return;
-    const wasReview = last && last.state === "REVIEW";
-    setBusy(true);
-    const r = await api(`/api/session/${sid}/numpad`, { field: typeTarget.field, txn_index: typeTarget.txn_index, digits: v });
-    setBusy(false);
-    if (!r) return;
-    if (r.numpad && r.numpad.error) { $("typeHint").textContent = "That doesn't look right — please check and try again."; return; }
-    $("typeInput").value = "";
-    if (wasReview) closeType();
-    render(r);
-  }
-  $("typeInput").addEventListener("keydown", e => { if (e.key === "Enter") sendTyped(); });
-
-  // --- SMS / skip / human
+  // --- bank SMS: the line stops listening while the box has focus, or the quiet would count as a silent turn
+  const pasting = () => document.activeElement === $("smsText");
+  $("smsText").addEventListener("focus", cancelRec);
+  $("smsText").addEventListener("blur", () => listen());
   $("smsSend").addEventListener("click", async () => {
-    const t = $("sms").value.trim(); if (!t) return;
-    if (await send(`/api/session/${sid}/sms`, { text: t })) $("sms").value = "";
-  });
-  $("skipBtn").addEventListener("click", async () => {
-    if (!last) return;
-    let body = null;
-    if (last.state === "NARRATIVE") body = { field: "amount" };
-    else if (last.state === "ASK_MORE_TXN") body = { field: "more_txn" };
-    else if (last.current_field) body = { field: last.current_field, txn_index: last.current_txn };
-    if (body) send(`/api/session/${sid}/skip`, body);
-  });
-  $("backBtn").addEventListener("click", async () => {
-    setNum(""); $("typeInput").value = "";
-    send(`/api/session/${sid}/back`);
+    const text = $("smsText").value.trim();
+    if (!text || busy || callOver()) return;
+    cancelRec(); stopSpeaking();
+    if (await send(`/api/session/${sid}/sms`, { text })) $("smsText").value = "";
   });
 
-  // --- summary copy / share
+  // --- controls
+  $("repeatBtn").addEventListener("click", () => { if (last && !callOver()) { cancelRec(); play(last.prompt.audio_urls); } });
+  $("muteBtn").addEventListener("click", () => {
+    muted = !muted;
+    $("muteBtn").setAttribute("aria-pressed", String(muted));
+    if (muted) cancelRec(); else listen();
+    refreshStatus();
+  });
+  $("endCall").addEventListener("click", () => {
+    stopSpeaking();
+    if (sid && last && last.state !== "QUEUED" && !last.handoff) fetch(`/api/session/${sid}/hangup`, { method: "POST", keepalive: true }).catch(() => {});
+    endCallUi();
+    caption("ai", "Call ended. / அழைப்பு முடிந்தது.");
+  });
+  $("again").addEventListener("click", () => location.reload());
   const summaryText = () => $("summaryBox").dataset.text || "";
   $("copyBtn").addEventListener("click", () => navigator.clipboard.writeText(summaryText()).then(() => $("copyBtn").textContent = "Copied ✓"));
   $("shareBtn").addEventListener("click", () => {
@@ -704,35 +696,42 @@
     else navigator.clipboard.writeText(text).then(() => $("shareBtn").textContent = "Copied ✓");
   });
 
-  // --- talking: one tap opens the mic. A pause ends the turn, like a phone call. A tap or # ends it sooner.
-  const SILENCE_MS = 2500, NO_SPEECH_MS = 10000, MIN_SPEECH_MS = 200, VAD_TICK_MS = 50;
+  // --- listening: the line opens by itself once the AI has finished, and a pause ends the turn.
+  // A short pause ends an answer; the story gets a little longer, since people pause while telling it.
+  const SILENCE_MS = 1200, STORY_SILENCE_MS = 2000, NO_SPEECH_MS = 10000, MIN_SPEECH_MS = 200, VAD_TICK_MS = 50;
   const MAX_REC_MS = 295000;  // just under the server's MAX_TURN_S safety cap, so a very long turn is still sent
-  let rec = null, chunks = [], stopTimer = null, stream = null, opening = false, discard = false, vadTimer = null;
-  const ptt = $("ptt");
-  const PTT_IDLE = "Tap to talk / தட்டிப் பேசுங்கள்";
-  const PTT_LISTENING = "Listening… stops when you pause / கேட்கிறேன்…";
-  const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  function pttIdle() {
-    clearTimeout(stopTimer); clearInterval(vadTimer);
-    ptt.classList.remove("rec"); show("recDot", false); stopWave();
-    $("pttText").textContent = PTT_IDLE;
-    refreshStatus();
+  let rec = null, chunks = [], stopTimer = null, stream = null, discard = false, vadTimer = null, heardSpeech = false;
+  let audioCtx = null, vad = null, micSource = null;
+  async function openMic() {
+    try {
+      stream = stream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx.resume();
+      if (!vad) { vad = audioCtx.createAnalyser(); vad.fftSize = 2048; micSource = audioCtx.createMediaStreamSource(stream); micSource.connect(vad); }
+    } catch (err) {
+      if (!stream) $("startErr").textContent = "Microphone blocked: you can still use the keypad.";
+    }
   }
-  function pttRecording() {
-    ptt.classList.add("rec"); show("recDot", true);
-    $("pttText").textContent = PTT_LISTENING;
-    refreshStatus();
-    startWave();
+  function listen() {
+    if (!stream || !sid || callOver() || muted || busy || rec || speaking() || numBuf || numpadTarget || typedQuestion() || pasting()) return;
+    chunks = []; discard = false; heardSpeech = false;
+    const mime = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+    try { rec = new MediaRecorder(stream, { audioBitsPerSecond: 64000, ...(mime ? { mimeType: mime } : {}) }); }
+    catch (err) { rec = null; return; }
+    rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
+    rec.onstop = upload;
+    rec.start();
+    stopTimer = setTimeout(stopRec, MAX_REC_MS);
     startVad();
+    refreshStatus();
   }
   // Ends the turn after a pause. The threshold follows the room: the floor starts low, so someone who talks the moment
-  // the mic opens still counts as speech, drops to any quieter level, and creeps up so steady room noise stops counting.
-  // No speech at all still sends the clip, so the call's silence handling runs. With no analyser, the tap or # ends the turn.
+  // the line opens still counts as speech, drops to any quieter level, and creeps up so steady room noise stops counting.
   function startVad() {
     if (!vad) return;
-    const samples = new Float32Array(vad.fftSize);
-    const began = Date.now();
-    let floor = .004, loudMs = 0, spoke = false, quietSince = null;
+    const samples = new Float32Array(vad.fftSize), start = Date.now();
+    const quietMs = last && last.state === "NARRATIVE" ? STORY_SILENCE_MS : SILENCE_MS;
+    let floor = .004, loudMs = 0, quietSince = null;
     vadTimer = setInterval(() => {
       vad.getFloatTimeDomainData(samples);
       let sum = 0;
@@ -740,79 +739,32 @@
       const rms = Math.sqrt(sum / samples.length), now = Date.now();
       floor = rms < floor ? Math.max(rms, .0005) : floor * 1.02;
       const loud = rms > Math.max(.012, floor * 3);
-      if (loud) { loudMs += VAD_TICK_MS; quietSince = null; if (loudMs >= MIN_SPEECH_MS) spoke = true; }
+      if (loud) { loudMs += VAD_TICK_MS; quietSince = null; if (loudMs >= MIN_SPEECH_MS) heardSpeech = true; }
       else if (quietSince === null) quietSince = now;
-      if (spoke ? quietSince !== null && now - quietSince >= SILENCE_MS : now - began >= NO_SPEECH_MS) stopRec();
+      if (heardSpeech ? quietSince !== null && now - quietSince >= quietMs : now - start >= NO_SPEECH_MS) stopRec();
     }, VAD_TICK_MS);
   }
-  // Live level bars from the mic. Only reads the signal: the recording itself is untouched.
-  let audioCtx = null, analyser = null, vad = null, waveSource = null, waveFrame = null;
-  function startWave() {
-    try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      audioCtx.resume();
-      if (!analyser) { analyser = audioCtx.createAnalyser(); analyser.fftSize = 128; analyser.smoothingTimeConstant = .7; }
-      if (!vad) { vad = audioCtx.createAnalyser(); vad.fftSize = 2048; }
-      if (!waveSource) { waveSource = audioCtx.createMediaStreamSource(stream); waveSource.connect(analyser); waveSource.connect(vad); }
-    } catch (err) { return; }  // the pulsing rings still show that it is recording
-    show("wave", true);
-    const canvas = $("wave"), g = canvas.getContext("2d"), levels = new Uint8Array(analyser.frequencyBinCount);
-    const BARS = 28, W = canvas.width, H = canvas.height, step = W / BARS;
-    const draw = () => {
-      analyser.getByteFrequencyData(levels);
-      g.clearRect(0, 0, W, H);
-      g.fillStyle = getComputedStyle(html).getPropertyValue("--wave");
-      for (let i = 0; i < BARS; i++) {
-        const h = Math.max(3, levels[i + 1] / 255 * H);
-        g.fillRect(i * step + 2, (H - h) / 2, step - 4, h);
-      }
-      waveFrame = requestAnimationFrame(draw);
-    };
-    draw();
-  }
-  function stopWave() { cancelAnimationFrame(waveFrame); show("wave", false); }
-  async function startRec() {
-    if (rec || opening || !sid) return;
-    opening = true;
-    try { stream = stream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-    catch (err) { $("keyHint").textContent = "Microphone blocked. You can still paste the SMS or use the keypad."; return; }
-    finally { opening = false; }
-    if ($("talk").classList.contains("hidden")) return;  // the call ended while the permission prompt was open
-    stopSpeaking();
-    chunks = []; discard = false;
-    const mime = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
-    rec = new MediaRecorder(stream, { audioBitsPerSecond: 64000, ...(mime ? { mimeType: mime } : {}) });
-    rec.ondataavailable = ev => ev.data.size && chunks.push(ev.data);
-    rec.onstop = upload;
-    rec.start();
-    pttRecording();
-    stopTimer = setTimeout(stopRec, MAX_REC_MS);
-  }
   function stopRec() {
-    pttIdle();
+    clearTimeout(stopTimer); clearInterval(vadTimer);
     if (rec && rec.state !== "inactive") rec.stop();
+    refreshStatus();
   }
-  // A tap on ✓/✗, Skip or similar moves the call on, so an open recording no longer answers the question on screen.
-  function cancelRec() {
-    if (!rec) return;
-    discard = true;
-    stopRec();
-  }
+  function cancelRec() { if (!rec) return; discard = true; stopRec(); }
   async function upload() {
     const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
     rec = null;
+    refreshStatus();
     if (discard || blob.size < 1000) return;
+    // While a number is being typed, a quiet line just means they are finding it: keep listening, do not count silence.
+    if (!heardSpeech && numpadTarget) { listen(); return; }
     const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
     const fd = new FormData(); fd.append("audio", blob, "clip." + ext);
-    ptt.disabled = true; $("transcript").textContent = "…";
     await send(`/api/session/${sid}/turn`, fd, true);
-    ptt.disabled = false;
   }
-  ptt.addEventListener("click", () => rec ? stopRec() : startRec());
 
   window.addEventListener("pagehide", () => {
-    // a finished call keeps its session for the summary; an abandoned one is dropped
-    if (sid && last && last.state !== "QUEUED" && !last.handoff) fetch(`/api/session/${sid}`, { method: "DELETE", keepalive: true });
+    // closing the page is hanging up: a call with anything in it still reaches an officer
+    if (sid && !ended && last && last.state !== "QUEUED" && !last.handoff) fetch(`/api/session/${sid}/hangup`, { method: "POST", keepalive: true });
   });
 })();
 </script>

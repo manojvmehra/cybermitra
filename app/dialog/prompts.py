@@ -8,12 +8,24 @@ from functools import lru_cache
 from app.config import get_settings
 
 PROMPTS: dict[str, dict[str, str]] = {
+    # The caller has dialled 1930 and the AI takes the call. The keys come first, so every later question can
+    # just say "type it". Then one question for the whole story, so most calls need only a check after it.
     "OPENING": {
-        "ta": "வணக்கம், நான் {app}, ஒரு AI உதவியாளர். நான் போலீஸ் இல்லை, பணத்தை முடக்க முடியாது. "
-              "OTP, PIN கேட்க மாட்டேன். 1930-க்கும் கால் பண்ணுங்க. என்ன நடந்தது, சொல்லுங்க.",
-        "en": "Hello, I am {app}, an AI assistant. I am not the police and I cannot freeze money. "
-              "I will never ask for an OTP or PIN. Please also call 1930. Tell me what happened.",
+        "ta": "1930 சைபர் கிரைம் உதவி எண்ணுக்கு வணக்கம். நான் {app}, AI உதவியாளர். "
+              "ஆமான்னா ஒன்று, இல்லைன்னா இரண்டு, புரியலைன்னா மூணு. நம்பர் டைப் பண்ண ஸ்டார், டைப், அப்புறம் ஹாஷ். "
+              "என்ன நடந்தது, எப்போ, எவ்வளவு பணம் போச்சு, UPI-யா கார்டா நெட் பேங்கிங்கா, எந்த பேங்க், "
+              "எல்லாத்தையும் ஒரே தடவையா சொல்லுங்க.",
+        "en": "Welcome to the 1930 cyber crime helpline. I am {app}, the AI assistant. "
+              "Press 1 for yes, 2 for no, and 3 if you did not understand. To type a number, press star, type it, "
+              "then hash. Tell me everything in one go: what happened, when, how much money went, "
+              "how it was paid, UPI, card or net banking, and from which bank.",
     },
+    "STORY_CHECK": {"ta": "நான் புரிஞ்சுக்கிட்டது: {facts}. சரியா?",
+                    "en": "Let me check: {facts}. Is that right?"},
+    "STORY_ONE_BY_ONE": {"ta": "சரி, ஒவ்வொன்றா சரிபார்க்கலாம்.", "en": "Okay, let's check them one by one."},
+    "FACT_payment_mode": {"ta": "{v} மூலமா", "en": "by {v}"},
+    "FACT_victim_bank": {"ta": "{v} அக்கவுண்ட்ல இருந்து", "en": "from your {v} account"},
+    "NO_FACTS": {"ta": "உங்க புகார்", "en": "your complaint"},
     "ASK_STORY": {"ta": "என்ன நடந்தது, சொல்லுங்க.", "en": "Tell me what happened."},
     "ASK_amount": {"ta": "எவ்வளவு பணம் போச்சு?", "en": "How much money was lost?"},
     "ASK_victim_bank": {"ta": "எந்த பேங்க் அக்கவுண்ட்ல இருந்து பணம் போச்சு?", "en": "Which bank was the money taken from?"},
@@ -32,31 +44,42 @@ PROMPTS: dict[str, dict[str, str]] = {
     "MAX_TXNS": {"ta": "இதற்கு மேல் transaction-களை அதிகாரி சேர்ப்பார்.",
                  "en": "An officer will add any further transactions."},
     "ASK_datetime": {"ta": "இது எப்போ நடந்தது? நாள், நேரம் சொல்லுங்கள்.", "en": "When did this happen? Say the day and time."},
+    # UTR and mobile numbers are typed, never asked aloud: the keypad is exact, speech is not.
     "ASK_utr": {
-        "ta": "பேங்க் SMS-ல உள்ள பன்னிரண்டு இலக்க UTR நம்பர். SMS-ஐ பேஸ்ட் பண்ணுங்க, டைப் பண்ணுங்க, அல்லது சொல்லுங்க.",
-        "en": "The 12-digit UTR or reference number from the bank SMS. Paste the SMS, type it, or say it.",
+        "ta": "பேங்க் SMS-ல உள்ள பன்னிரண்டு இலக்க UTR நம்பர்: ஸ்டார் அழுத்தி, டைப் பண்ணி, ஹாஷ் அழுத்துங்க. "
+              "தெரியலைன்னா இரண்டு அழுத்துங்க.",
+        "en": "The 12-digit UTR number from the bank SMS: press star, type it, then press hash. "
+              "If you don't have it, press 2.",
     },
-    "ASK_suspect_phone": {"ta": "உங்களுக்கு கால் வந்த நம்பர் என்ன?", "en": "What number did the fraudster call from?"},
+    "ASK_suspect_phone": {"ta": "உங்களுக்கு கால் வந்த நம்பர்: ஸ்டார் அழுத்தி, டைப் பண்ணி, ஹாஷ் அழுத்துங்க. "
+                                "தெரியலைன்னா இரண்டு அழுத்துங்க.",
+                          "en": "The number the fraudster called from: press star, type it, then press hash. "
+                                "If you don't know it, press 2."},
     "ASK_suspect_upi": {
         "ta": "பணம் அனுப்பின UPI ஐடி தெரியுமா? தெரியலைன்னா 'தெரியல' என்று சொல்லுங்கள்.",
         "en": "Do you know the UPI ID the money went to? If not, say 'don't know'.",
     },
     "ASK_victim_name": {"ta": "உங்கள் பெயர் என்ன?", "en": "What is your name?"},
-    "ASK_victim_mobile": {"ta": "உங்கள் மொபைல் நம்பர் என்ன?", "en": "What is your mobile number?"},
+    "ASK_victim_mobile": {"ta": "உங்க மொபைல் நம்பர்: ஸ்டார் அழுத்தி, டைப் பண்ணி, ஹாஷ் அழுத்துங்க.",
+                          "en": "Your mobile number: press star, type it, then press hash."},
     "ASK_district": {"ta": "நீங்கள் எந்த மாவட்டம்?", "en": "Which district are you in?"},
-    "DIDNT_CATCH": {"ta": "மன்னிக்கவும், சரியா புரியல. மறுபடி சொல்லுங்க, அல்லது கீபேட் பயன்படுத்துங்க.",
-                    "en": "Sorry, I didn't catch that. Please say it again, or use the keypad."},
-    "SILENCE": {"ta": "எதுவும் கேட்கல. மைக்கை தட்டி பேசுங்க.",
-                "en": "I didn't hear anything. Tap the mic and speak."},
-    "WRONG_LEN_utr": {"ta": "நான் {n} இலக்கம் கேட்டேன். UTR பன்னிரண்டு இலக்கம். மறுபடி சொல்லுங்க, அல்லது SMS பேஸ்ட் பண்ணுங்க.",
-                      "en": "I heard {n} digits. A UTR has 12. Please say it again, or paste the SMS."},
-    "WRONG_LEN_phone": {"ta": "நான் {n} இலக்கம் கேட்டேன். மொபைல் நம்பர் பத்து இலக்கம். மறுபடி சொல்லுங்க.",
-                        "en": "I heard {n} digits. A mobile number has 10. Please say it again."},
-    "CORRECT_CHUNK": {"ta": "சரியான இலக்கங்களை, அல்லது முழு நம்பரையும் சொல்லுங்க, அல்லது டைப் பண்ணுங்க.",
-                      "en": "Please say the correct digits or the whole number, or type it."},
-    "CONFIRM_HINT": {"ta": "சரி என்றால் 'ஆமா', தப்பு என்றால் 'இல்ல' சொல்லுங்க, அல்லது 1, 2 அழுத்துங்க.",
-                     "en": "Say 'yes' if it is right or 'no' if it is wrong, or press 1 or 2."},
-    "USE_NUMPAD": {"ta": "கீபேட்ல டைப் பண்ணுங்க.", "en": "Please type it on the keypad."},
+    "DIDNT_CATCH": {"ta": "மன்னிக்கவும், சரியா புரியல. மறுபடி சொல்லுங்க.",
+                    "en": "Sorry, I didn't catch that. Please say it again."},
+    "TYPE_amount": {"ta": "மன்னிக்கவும், தொகை சரியா புரியல. ஸ்டார் அழுத்தி, தொகையை ரூபாயில் டைப் பண்ணி, ஹாஷ் அழுத்துங்க.",
+                    "en": "Sorry, I didn't catch the amount. Press star, type the amount in rupees, then press hash."},
+    "SILENCE": {"ta": "எதுவும் கேட்கல. தயவு செய்து பேசுங்க.", "en": "I didn't hear anything. Please speak now."},
+    "WRONG_LEN_utr": {"ta": "எனக்கு {n} இலக்கம் வந்தது. UTR பன்னிரண்டு இலக்கம். ஸ்டார் அழுத்தி, மறுபடி டைப் பண்ணி, ஹாஷ் அழுத்துங்க.",
+                      "en": "I got {n} digits. A UTR has 12. Press star, type it again, then press hash."},
+    "WRONG_LEN_phone": {"ta": "எனக்கு {n} இலக்கம் வந்தது. மொபைல் நம்பர் பத்து இலக்கம். ஸ்டார் அழுத்தி, மறுபடி டைப் பண்ணி, ஹாஷ் அழுத்துங்க.",
+                        "en": "I got {n} digits. A mobile number has 10. Press star, type it again, then press hash."},
+    "BAD_PHONE": {"ta": "மொபைல் நம்பர் ஆறு, ஏழு, எட்டு அல்லது ஒன்பதில் தொடங்கும். ஸ்டார் அழுத்தி, மறுபடி டைப் பண்ணி, ஹாஷ் அழுத்துங்க.",
+                  "en": "A mobile number starts with 6, 7, 8 or 9. Press star, type it again, then press hash."},
+    "CORRECT_CHUNK": {"ta": "சரியான இலக்கங்களை சொல்லுங்க, அல்லது ஸ்டார் அழுத்தி, டைப் பண்ணி, ஹாஷ் அழுத்துங்க.",
+                      "en": "Please say the correct digits, or press star, type them, then press hash."},
+    "CONFIRM_HINT": {"ta": "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு அழுத்துங்க.",
+                     "en": "Press 1 if it is right, or 2 if it is wrong."},
+    "USE_NUMPAD": {"ta": "ஸ்டார் அழுத்தி, டைப் பண்ணி, ஹாஷ் அழுத்துங்க. தெரியலைன்னா இரண்டு.",
+                   "en": "Press star, type it, then press hash. If you don't know it, press 2."},
     "READBACK": {"ta": "{label}: {words}. சரியா?", "en": "{label}: {words}. Is that right?"},
     "HIGH_AMOUNT": {"ta": "இது பத்து லட்சத்துக்கு மேல். தொகையை ஒருமுறை திரையில் சரிபாருங்க.",
                     "en": "This is above ten lakh. Please check the amount on screen once more."},
@@ -71,64 +94,52 @@ PROMPTS: dict[str, dict[str, str]] = {
                    "en": "I took the details from the SMS. Please check them on screen."},
     "REVIEW": {"ta": "மொத்தம் {n} transaction, {total}. எல்லாம் சரியா?",
                "en": "Transactions: {n}, total {total}. Is everything correct?"},
-    "REVIEW_FIX": {"ta": "திரையில் தப்பான விவரத்தை தொட்டு சரி பண்ணுங்க, அல்லது 'ஆள் வேணும்' சொல்லுங்க.",
-                   "en": "Tap the wrong detail on screen to fix it, or say 'officer' to talk to a person."},
-    "QUEUED": {"ta": "நன்றி. உங்க விவரங்கள் ஒரு அதிகாரியின் சரிபார்ப்புக்கு அனுப்பப்பட்டன. உங்க வரைவு எண் திரையில் உள்ளது.",
-               "en": "Thank you. Your details are sent to an officer for review. Your draft reference is on screen."},
+    "REVIEW_FIX": {"ta": "ஏதாவது தப்புன்னா, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க. அப்படியே அனுப்ப ஒன்று அழுத்துங்க.",
+                   "en": "If something is wrong, press 0 for an officer. To send it as it is, press 1."},
+    # The last thing said: a summary, the SMS, goodbye. The call then ends by itself.
+    "QUEUED": {"ta": "நன்றி. {facts}, இதை பதிவு செஞ்சிருக்கேன். ஒரு அதிகாரி சரிபார்ப்பார். "
+                     "குறிப்பு எண்ணும் அடுத்து செய்ய வேண்டியதும் SMS-ல அனுப்புவோம். வணக்கம்.",
+               "en": "Thank you. I have noted {facts}. An officer will review your complaint. "
+                     "We will send you an SMS with your reference number and next steps. Goodbye."},
     "NS_CALL_BANK": {"ta": "உடனே உங்க பேங்க் ஹெல்ப்லைனுக்கு கால் பண்ணி மோசடியை சொல்லி, கார்டு, UPI-ஐ பிளாக் பண்ண சொல்லுங்க.",
                      "en": "Call your bank's helpline now, report the fraud, and ask them to block your card and UPI."},
-    "NS_CALL_1930": {"ta": "இன்னும் பண்ணலைன்னா, 1930-க்கு கால் பண்ணி இந்த சுருக்கத்தை சொல்லுங்க.",
-                     "en": "If you have not already, call 1930 and give them this summary."},
     "NS_KEEP_EVIDENCE": {"ta": "SMS, கால் லிஸ்ட், சாட் எதையும் அழிக்காதீங்க. ஸ்கிரீன்ஷாட் எடுத்து வெச்சுக்கோங்க.",
                          "en": "Do not delete SMS, call logs or chats. Take screenshots."},
     "NS_CHANGE_PIN": {"ta": "உங்க சொந்த போனிலிருந்து நெட் பேங்கிங், UPI PIN-ஐ மாத்துங்க.",
                       "en": "Change your net-banking password and UPI PIN from your own phone."},
     "NS_RECOVERY_SCAM": {"ta": "பணத்தை திரும்ப வாங்கித் தர்றோம்னு கட்டணம் கேட்கறவங்க இன்னொரு மோசடி.",
                          "en": "Anyone who offers to recover your money for a fee is another scam."},
-    "HANDOFF_HUMAN": {"ta": "உங்களை ஒரு அதிகாரியிடம் இணைக்கிறேன் (டெமோவில் இது மாதிரி மட்டும்). தயவு செய்து 1930-க்கும் கால் பண்ணுங்க.",
-                      "en": "Connecting you to an officer (simulated in demo). Please also call 1930."},
-    "HANDOFF_NONFIN": {"ta": "இதற்கு ஒரு அதிகாரி உதவுவார். 1930-க்கு கால் பண்ணுங்க அல்லது cybercrime.gov.in-ல் புகார் கொடுங்க. நீங்கள் தனியாக இல்லை.",
-                       "en": "An officer will help with this. Please call 1930 or report at cybercrime.gov.in. You are not alone."},
-    "HANDOFF_WELLBEING": {"ta": "நீங்கள் முக்கியம். இப்போதே Tele-MANAS 14416-க்கு கால் பண்ணுங்க. பண விஷயத்திற்கு 1930.",
-                          "en": "You matter. Please call Tele-MANAS on 14416 now. For the money, call 1930."},
-    "RATE_LIMITED": {"ta": "இப்போது சேவை பிஸியாக உள்ளது. நேரடியாக 1930-க்கு கால் பண்ணுங்க.",
-                     "en": "The service is busy right now. Please call 1930 directly."},
+    "HANDOFF_HUMAN": {"ta": "லைன்லயே இருங்க, உங்களை ஒரு அதிகாரியிடம் இணைக்கிறேன் (டெமோவில் இது மாதிரி மட்டும்). "
+                            "நீங்க சொன்னது அவருக்குத் தெரியும்.",
+                      "en": "Please stay on the line, I am connecting you to an officer (simulated in demo). "
+                            "They will have everything you told me."},
+    "HANDOFF_NONFIN": {"ta": "இதற்கு ஒரு அதிகாரி உதவுவார், லைன்லயே இருங்க. cybercrime.gov.in-லும் புகார் கொடுக்கலாம். "
+                             "நீங்கள் தனியாக இல்லை.",
+                       "en": "An officer will help with this, please stay on the line. You can also report at "
+                             "cybercrime.gov.in. You are not alone."},
+    "HANDOFF_WELLBEING": {"ta": "நீங்கள் முக்கியம். இப்போதே Tele-MANAS 14416-க்கு கால் பண்ணுங்க. ஒரு அதிகாரியையும் இணைக்கிறேன்.",
+                          "en": "You matter. Please call Tele-MANAS on 14416 now. I am also connecting you to an officer."},
+    "RATE_LIMITED": {"ta": "எல்லா லைன்களும் இப்போது பிஸியாக உள்ளன. சில நிமிடங்களில் மறுபடி கால் பண்ணுங்க.",
+                     "en": "All our lines are busy right now. Please call again in a few minutes."},
     "TOO_LONG": {"ta": "கொஞ்சம் சுருக்கமா சொல்லுங்க.", "en": "Please keep it shorter."},
 
-    # Phone calls have no screen. text() prefers PHONE_<id> over <id> on that channel.
+    # Telephony has no screen. text() prefers PHONE_<id> over <id> on that channel.
     "PHONE_OPENING": {
-        "ta": "வணக்கம். இது சோதனை டெமோ, உண்மையான விவரங்கள் வேண்டாம். நான் {app}, AI உதவியாளர். "
-              "போலீஸ் இல்லை, பணத்தை முடக்க முடியாது. OTP, PIN கேட்க மாட்டேன். "
-              "1930-க்கும் கால் பண்ணுங்க. என்ன நடந்தது, சொல்லுங்க.",
-        "en": "Hello. This is an experimental demo, so give no real details. I am {app}, an AI, not the police, "
-              "and I cannot freeze money. I will never ask for an OTP or PIN. "
-              "Please also call 1930. Tell me what happened.",
+        "ta": "1930 சைபர் கிரைம் உதவி எண்ணுக்கு வணக்கம். இது சோதனை டெமோ, உண்மையான விவரங்கள் வேண்டாம். நான் {app}, AI உதவியாளர். "
+              "ஆமான்னா ஒன்று, இல்லைன்னா இரண்டு, புரியலைன்னா மூணு. நம்பர் டைப் பண்ண ஸ்டார், டைப், அப்புறம் ஹாஷ். "
+              "என்ன நடந்தது, எப்போ, எவ்வளவு பணம் போச்சு, UPI-யா கார்டா நெட் பேங்கிங்கா, எந்த பேங்க், "
+              "எல்லாத்தையும் ஒரே தடவையா சொல்லுங்க.",
+        "en": "Welcome to the 1930 cyber crime helpline. This is an experimental demo, so give no real details. "
+              "I am {app}, the AI assistant. Press 1 for yes, 2 for no, and 3 if you did not understand. "
+              "To type a number, press star, type it, then hash. Tell me everything in one go: what happened, when, how much money went, "
+              "how it was paid, UPI, card or net banking, and from which bank.",
     },
-    "PHONE_KEYS": {
-        "ta": "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு, மறுபடி கேட்க மூன்று, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க.",
-        "en": "Press 1 for yes, 2 for no, 3 to repeat, and 0 for an officer.",
-    },
-    "PHONE_ASK_utr": {
-        "ta": "பேங்க் SMS-ல உள்ள பன்னிரண்டு இலக்க UTR நம்பரை சொல்லுங்க. அல்லது ஸ்டார் அழுத்தி டைப் பண்ணி, கடைசியில் ஹாஷ் அழுத்துங்க.",
-        "en": "Say the 12-digit UTR number from the bank SMS. Or press star, type it, then press hash.",
-    },
-    "PHONE_DIDNT_CATCH": {"ta": "மன்னிக்கவும், சரியா புரியல. மறுபடி சொல்லுங்க.",
-                          "en": "Sorry, I didn't catch that. Please say it again."},
-    "PHONE_SILENCE": {"ta": "எதுவும் கேட்கல. தயவு செய்து பேசுங்க.", "en": "I didn't hear anything. Please speak now."},
-    "PHONE_WRONG_LEN_utr": {"ta": "நான் {n} இலக்கம் கேட்டேன். UTR பன்னிரண்டு இலக்கம். மறுபடி சொல்லுங்க, அல்லது ஸ்டார் அழுத்தி டைப் பண்ணுங்க.",
-                            "en": "I heard {n} digits. A UTR has 12. Please say it again, or press star and type it."},
-    "PHONE_CORRECT_CHUNK": {"ta": "சரியான இலக்கங்களை சொல்லுங்க, அல்லது டைப் பண்ணி ஹாஷ் அழுத்துங்க.",
-                            "en": "Please say the correct digits for this part, or type them and press hash."},
-    "PHONE_CONFIRM_HINT": {"ta": "சரி என்றால் ஒன்று, தப்பு என்றால் இரண்டு அழுத்துங்க.",
-                           "en": "Press 1 if it is right, or 2 if it is wrong."},
-    "PHONE_USE_NUMPAD": {"ta": "கீபேட்ல டைப் பண்ணி, கடைசியில் ஹாஷ் அழுத்துங்க.",
-                         "en": "Please type it on the keypad, then press hash."},
     "PHONE_HIGH_AMOUNT": {"ta": "இது பத்து லட்சத்துக்கு மேல். தொகையை கவனமா கேட்டு சரிபாருங்க.",
                           "en": "This is above ten lakh. Please listen carefully and check the amount."},
-    "PHONE_REVIEW_FIX": {"ta": "ஏதாவது தப்புன்னா, அதிகாரியிடம் பேச பூஜ்ஜியம் அழுத்துங்க. அப்படியே அனுப்ப ஒன்று அழுத்துங்க.",
-                         "en": "If something is wrong, press 0 for an officer. To send it as it is, press 1."},
-    "PHONE_QUEUED": {"ta": "நன்றி. உங்க விவரங்கள் ஒரு அதிகாரியின் சரிபார்ப்புக்கு அனுப்பப்பட்டன.",
-                     "en": "Thank you. Your details are sent to an officer for review."},
+    "PHONE_QUEUED": {"ta": "நன்றி. {facts}, இதை பதிவு செஞ்சிருக்கேன். ஒரு அதிகாரி சரிபார்ப்பார். "
+                           "இந்த சோதனை டெமோவில் SMS அனுப்பப்படாது, அதனால் குறிப்பு எண்ணை குறிச்சுக்கோங்க.",
+                     "en": "Thank you. I have noted {facts}. An officer will review your complaint. "
+                           "This experimental demo sends no SMS, so please note your draft reference."},
     "PHONE_REFERENCE": {"ta": "உங்க வரைவு குறிப்பு எண் {ref}. இது போலீஸ் எண் அல்ல.",
                         "en": "Your draft reference is {ref}. This is not a police number."},
 }
@@ -148,7 +159,8 @@ LABELS: dict[str, dict[str, str]] = {
     "district": {"ta": "மாவட்டம்", "en": "District"},
 }
 
-NEXT_STEPS = ["NS_CALL_BANK", "NS_CALL_1930", "NS_KEEP_EVIDENCE", "NS_CHANGE_PIN", "NS_RECOVERY_SCAM"]
+# The caller is already on 1930, so the steps start with their bank.
+NEXT_STEPS = ["NS_CALL_BANK", "NS_KEEP_EVIDENCE", "NS_CHANGE_PIN", "NS_RECOVERY_SCAM"]
 # Lines with an official source recorded in docs/NEXT_STEPS_SOURCES.md. Others show "draft guidance" in DEMO_MODE.
 NEXT_STEPS_SOURCED: set[str] = set()
 

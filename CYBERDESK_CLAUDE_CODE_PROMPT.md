@@ -1,4 +1,4 @@
-# CyberMitra — Claude Code Build Prompt (Backend-first)
+# CyberDesk — Claude Code Build Prompt (Backend-first)
 
 > Paste this whole file into Claude Code at the repo root (or save it as `CLAUDE.md`).
 > Frontend stays a single static HTML page. All effort goes into the backend, Gnani integration, number pipeline, state machine, and benchmark.
@@ -7,7 +7,7 @@
 
 ## 0. ROLE AND GOAL
 
-You are building **CyberMitra**, a voice-first cyber-fraud complaint *preparation* tool for Tamil Nadu, for the Gnani AI "Great Indian AI Internship Challenge 2026" (deadline **10 Nov 2026, 23:59 IST**).
+You are building **CyberDesk**, a voice-first cyber-fraud complaint *preparation* tool for Tamil Nadu, for the Gnani AI "Great Indian AI Internship Challenge 2026" (deadline **10 Nov 2026, 23:59 IST**).
 
 A victim speaks Tamil / Tanglish / English. The backend transcribes with **Gnani Prisma**, extracts the fields 1930 operators ask for, converts every number **deterministically in code**, reads numbers back in chunks with **Gnani Timbre**, lets the user correct them, and outputs a **1930 Call Card** (text).
 
@@ -27,7 +27,7 @@ It does NOT file complaints, does NOT contact police/banks, does NOT freeze mone
 6. **Never fabricate benchmark numbers.** All reported metrics are computed by `bench/run_benchmark.py` from real API output. No target tables in README.
 7. **Async + bounded concurrency.** Gnani may return `429 RATE_LIMITED` ("Only 1 active request is allowed at a time"). Wrap every Gnani call in a global `asyncio.Semaphore(GNANI_MAX_CONCURRENCY)` (default 1) with exponential backoff + jitter (max 4 tries).
 8. **Cache every Gnani call** by SHA-256 of (audio bytes or text) + all request params. Cache hits must never hit the network.
-9. App name is a config value (`APP_NAME`, default `CyberMitra`). Never hardcode it in prompts/strings — the name may change.
+9. App name is a config value (`APP_NAME`, default `CyberDesk`). Never hardcode it in prompts/strings — the name may change.
 
 ---
 
@@ -118,7 +118,7 @@ Session store: in-memory dict, TTL 30 min, no DB.
 ## 4. REPO LAYOUT (create exactly this)
 
 ```
-cybermitra/
+cyberdesk/
 ├── CLAUDE.md                      # this prompt
 ├── README.md                      # setup, run, architecture, HONEST measured benchmark table
 ├── .env.example
@@ -208,7 +208,7 @@ EVON_BASE_URL=http://localhost:8000/v1
 EVON_MODEL=model
 EVON_TIMEOUT_S=8
 
-APP_NAME=CyberMitra
+APP_NAME=CyberDesk
 SESSION_TTL_S=1800
 MAX_CLIP_S=25
 DAILY_SESSION_CAP=40

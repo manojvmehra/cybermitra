@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.dialog import packet as P  # noqa: E402
 from app.dialog import readback  # noqa: E402
 from app.dialog.models import DIGIT_FIELDS, TXN_FIELDS, Event, Session  # noqa: E402
-from app.dialog.state_machine import next_state  # noqa: E402
+from app.dialog.state_machine import next_state, story_items  # noqa: E402
 from app.nlp import timeparse, validators  # noqa: E402
 from bench.corpus_lib import Call, load_calls, within_precision  # noqa: E402
 
@@ -96,6 +96,18 @@ class Oracle:
             return self.txns[txn].get(field) if txn is not None and txn < len(self.txns) else None
         return self.case.get(field)
 
+    def story_ok(self, s: Session) -> bool:
+        for name, txn, _, f in story_items(s):
+            want = self.truth(name, txn)
+            if want is None:
+                continue  # nothing to check against: accept, as a caller would
+            if name == "datetime":
+                if not within_precision(str(f.value), str(want), f.precision):
+                    return False
+            elif str(f.value) != str(want):
+                return False
+        return True
+
     def act(self, s: Session) -> Event | None:
         st = s.state
         if st == "READBACK" and s.readback:
@@ -127,6 +139,9 @@ class Oracle:
                 return Event(type="SKIP", field=f, txn_index=txn)
             self.typed[f] = self.typed.get(f, 0) + 1
             return Event(type="NUMPAD", field=f, txn_index=txn, digits=str(want))
+        if st == "STORY_CHECK":
+            # one yes for everything the story gave, only if all of it is right; a no reads each back
+            return Event(type="BUTTON", field="story", answer="yes" if self.story_ok(s) else "no")
         if st == "ASK_MORE_TXN":
             return Event(type="BUTTON", field="more_txn", answer="yes" if len(s.txns) < len(self.txns) else "no")
         if st == "DUP_CHECK":
